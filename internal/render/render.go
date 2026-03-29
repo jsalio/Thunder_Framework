@@ -41,6 +41,7 @@ func (e *Engine) SetDebug(isDebug bool) {
 	e.isDebug = isDebug
 }
 
+// Render renderiza una página por nombre (modo legacy con directorio base).
 func (e *Engine) Render(buffer io.Writer, name string, data any) error {
 	template, err := e.getTemplate(name)
 	if err != nil {
@@ -49,6 +50,72 @@ func (e *Engine) Render(buffer io.Writer, name string, data any) error {
 	return template.Execute(buffer, data)
 }
 
+// RenderFile renderiza un componente desde su path absoluto/relativo,
+// opcionalmente envuelto en un layout. Este es el método principal del
+// sistema de componentes co-locados.
+func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath string, data any) error {
+	cacheKey := templatePath + "|" + layoutPath
+
+	// 1. Buscar en cache
+	var tmpl *template.Template
+	if !e.isDebug {
+		e.mu.RLock()
+		cached, ok := e.cache[cacheKey]
+		e.mu.RUnlock()
+		if ok {
+			tmpl = cached
+		}
+	}
+
+	// 2. Compilar si no estaba en cache
+	if tmpl == nil {
+		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+			return fmt.Errorf("template %q no encontrado", templatePath)
+		}
+
+		var err error
+		if layoutPath != "" {
+			if _, err := os.Stat(layoutPath); os.IsNotExist(err) {
+				return fmt.Errorf("layout %q no encontrado", layoutPath)
+			}
+			// El layout es el template raíz; la página se define dentro.
+			tmpl, err = template.New(filepath.Base(layoutPath)).
+				Funcs(e.funcMap).
+				ParseFiles(layoutPath, templatePath)
+		} else {
+			// Sin layout: renderiza solo el fragmento del componente.
+			tmpl, err = template.New(filepath.Base(templatePath)).
+				Funcs(e.funcMap).
+				ParseFiles(templatePath)
+		}
+
+		if err != nil {
+			return fmt.Errorf("compilando template: %w", err)
+		}
+
+		if !e.isDebug {
+			e.mu.Lock()
+			e.cache[cacheKey] = tmpl
+			e.mu.Unlock()
+		}
+	}
+
+	// 3. Ejecutar — un solo camino para cache hit y miss.
+	// Sin layout: ejecutar el bloque "content" directamente,
+	// porque el template raíz está vacío (todo vive dentro de {{define "content"}}).
+	if layoutPath == "" {
+		return tmpl.ExecuteTemplate(buffer, "content", data)
+	}
+	return tmpl.Execute(buffer, data)
+}
+
+// RenderPartial renderiza solo el fragmento de un componente sin layout.
+// Útil para respuestas parciales (HTMX, fetch, etc.).
+func (e *Engine) RenderPartial(buffer io.Writer, templatePath string, data any) error {
+	return e.RenderFile(buffer, templatePath, "", data)
+}
+
+// getTemplate mantiene compatibilidad con el sistema legacy de directorios.
 func (e *Engine) getTemplate(name string) (*template.Template, error) {
 	if !e.isDebug {
 		e.mu.RLock()
@@ -73,7 +140,6 @@ func (e *Engine) getTemplate(name string) (*template.Template, error) {
 		files := append(layoutFiles, pagePath)
 		tmpl, err = template.New("layout"+e.extension).Funcs(e.funcMap).ParseFiles(files...)
 	} else {
-		// Sin layout, solo la página.
 		tmpl, err = template.New(name + e.extension).Funcs(e.funcMap).ParseFiles(pagePath)
 	}
 
@@ -81,7 +147,6 @@ func (e *Engine) getTemplate(name string) (*template.Template, error) {
 		return nil, fmt.Errorf("compilando plantilla: %w", err)
 	}
 
-	// Guardar en caché.
 	if !e.isDebug {
 		e.mu.Lock()
 		e.cache[name] = tmpl
@@ -89,7 +154,6 @@ func (e *Engine) getTemplate(name string) (*template.Template, error) {
 	}
 
 	return tmpl, nil
-
 }
 
 func defaultFuncMap() template.FuncMap {

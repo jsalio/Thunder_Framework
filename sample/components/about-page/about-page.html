@@ -1,0 +1,15 @@
+{{define "title"}}Acerca de{{end}}
+
+{{define "content"}}
+<h1>Acerca de Thunder Framework</h1>
+<p>Thunder es un framework minimalista para construir aplicaciones web en Go con arquitectura de componentes.</p>
+
+<h2>Filosofía</h2>
+<ul>
+    <li>Componentes auto-contenidos: template + handler co-locados</li>
+    <li>Estado centralizado accesible desde cualquier componente</li>
+    <li>Sin magia, sin generación de código: solo Go estándar</li>
+</ul>
+
+<p>Versión: {{index . "version"}}</p>
+{{end}}

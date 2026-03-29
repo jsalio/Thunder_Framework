@@ -1,0 +1,76 @@
+{{define "title"}}Thunder TODO{{end}}
+
+{{define "content"}}
+<div class="todo-container">
+
+    {{/* ── Stats bar ── */}}
+    <div class="stats-bar">
+        <div class="stat">
+            <span class="stat-value">{{(index .Stats "Total")}}</span>
+            <span class="stat-label">Total</span>
+        </div>
+        <div class="stat stat--accent">
+            <span class="stat-value">{{(index .Stats "Pending")}}</span>
+            <span class="stat-label">Pendientes</span>
+        </div>
+        <div class="stat stat--done">
+            <span class="stat-value">{{(index .Stats "Done")}}</span>
+            <span class="stat-label">Completadas</span>
+        </div>
+    </div>
+
+    {{/* ── Add todo form ── */}}
+    <form class="add-form" action="/todos" method="POST"
+          hx-post="/todos" hx-target=".todo-container" hx-swap="outerHTML">
+        <input
+            class="add-input"
+            type="text"
+            name="text"
+            placeholder="Nueva tarea..."
+            autocomplete="off"
+            autofocus
+            required
+        />
+        <button class="add-btn" type="submit">
+            <span>+</span> Agregar
+        </button>
+    </form>
+
+    {{/* ── Todo list ── */}}
+    <ul class="todo-list">
+        {{if not .Todos}}
+        <li class="todo-empty">
+            <span>🎉</span>
+            <p>No hay tareas. ¡Agrega una arriba!</p>
+        </li>
+        {{else}}
+        {{range .Todos}}
+        <li class="todo-item {{if .Done}}todo-item--done{{end}}">
+            <form action="/todos/{{.ID}}/done" method="POST" class="todo-check-form"
+                  hx-post="/todos/{{.ID}}/done" hx-target="closest .todo-container" hx-swap="outerHTML">
+                <button class="todo-check" type="submit" title="{{if .Done}}Marcar pendiente{{else}}Marcar completada{{end}}">
+                    {{if .Done}}✓{{else}}&nbsp;{{end}}
+                </button>
+            </form>
+            <span class="todo-text">{{.Text}}</span>
+            <form action="/todos/{{.ID}}/delete" method="POST" class="todo-delete-form"
+                  hx-post="/todos/{{.ID}}/delete" hx-target="closest .todo-container" hx-swap="outerHTML">
+                <button class="todo-delete" type="submit" title="Eliminar">✕</button>
+            </form>
+        </li>
+        {{end}}
+        {{end}}
+    </ul>
+
+    {{/* ── Clear completed ── */}}
+    {{if gt (index .Stats "Done") 0}}
+    <form action="/todos/clear" method="POST" class="clear-form"
+          hx-post="/todos/clear" hx-target="closest .todo-container" hx-swap="outerHTML">
+        <button class="clear-btn" type="submit">
+            Limpiar completadas ({{index .Stats "Done"}})
+        </button>
+    </form>
+    {{end}}
+
+</div>
+{{end}}

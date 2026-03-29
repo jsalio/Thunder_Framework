@@ -1,0 +1,19 @@
+{{define "title"}}Inicio{{end}}
+
+{{define "content"}}
+<h1>Bienvenido a Thunder Framework</h1>
+<p>Un framework web minimalista con arquitectura de componentes, hecho en Go.</p>
+
+<h2>¿Qué tiene?</h2>
+<ul>
+    <li>Router con parámetros (Go 1.22 nativo)</li>
+    <li>Middleware chain (Logger + Recover)</li>
+    <li>Motor de templates con layouts y caché</li>
+    <li>Archivos estáticos</li>
+    <li>Graceful shutdown</li>
+    <li>Componentes co-locados (template + handler juntos)</li>
+    <li>State store global (como signals de Angular)</li>
+</ul>
+
+<p>Visita <a href="/users/42">/users/42</a> para ver parámetros en acción.</p>
+{{end}}

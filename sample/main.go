@@ -4,34 +4,38 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"thunder/internal"
+
+	aboutpage "thunder/sample/components/about-page"
+	homepage "thunder/sample/components/home-page"
+	usercard "thunder/sample/components/user-card"
 )
 
 func main() {
 	app := internal.NewApp()
 
-	currentDir, _ := os.Getwd()
-	log.Println(currentDir + "/sample/templates")
-	app.SetTemplatesDirectory(currentDir + "/sample/templates")
+	// ── Estado global (equivalente a signals en el AppComponent de Angular) ──
+	app.State.Set("siteName", "Thunder Framework")
+	app.State.Set("version", "0.1")
 
-	// app.Renderer.SetDebug(true)
+	// ── Archivos estáticos ──
+	app.Static("/static/", "./sample/static")
 
-	app.GET("/", func(w http.ResponseWriter, r *http.Request) {
-		app.Render(w, "home", nil)
-	})
+	// ── Registrar componentes ──
+	// Cada componente conoce su propia ruta, su template y su handler.
+	// main.go solo los orquesta, no contiene lógica de vista.
+	homepage.Register(app)
+	aboutpage.Register(app)
+	usercard.Register(app)
 
-	app.GET("/about", func(w http.ResponseWriter, r *http.Request) {
-		app.Render(w, "about", nil)
-	})
-
-	app.GET("/users/:id", func(w http.ResponseWriter, r *http.Request) {
-		app.Render(w, "user", nil)
+	// ── Partial sin layout (útil para HTMX / fetch parcial) ──
+	app.GET("/api/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"version":"%s"}`, app.State.Get("version"))
 	})
 
 	fmt.Println(`
   ╔══════════════════════════════════════╗
-  ║   mi-framework v0.1                  ║
+  ║   Thunder Framework v0.1             ║
   ║   Servidor en http://localhost:8080  ║
   ║   Ctrl+C para detener                ║
   ╚══════════════════════════════════════╝
