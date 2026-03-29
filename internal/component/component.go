@@ -1,3 +1,4 @@
+// Package component defines the structure and context for framework components.
 package component
 
 import (
@@ -5,9 +6,9 @@ import (
 	"thunder/internal/state"
 )
 
-// Ctx es el contexto que se pasa al Handler de un componente.
-// Equivale al injection context de Angular: accede al estado global,
-// a la request y a los parámetros de ruta.
+// Ctx is the context passed to a component's Handler.
+// It's similar to Angular's injection context: accesses global state,
+// the request, route parameters, and the response writer.
 type Ctx struct {
 	State   *state.State
 	Request *http.Request
@@ -15,18 +16,18 @@ type Ctx struct {
 	Writer  http.ResponseWriter
 }
 
-// Component une el template HTML con su handler de datos.
-// Equivale a un @Component de Angular: lógica + vista co-locados.
+// Component unites an HTML template with its data handler.
+// It's similar to an Angular @Component: logic and view co-located.
 type Component struct {
-	// TemplatePath es la ruta al archivo .html del componente.
-	// Debe ser relativa al directorio de trabajo o absoluta.
+	// TemplatePath is the path to the component's .html file.
+	// It must be relative to the working directory or absolute.
 	TemplatePath string
 
-	// LayoutPath es la ruta opcional al layout envolvente.
-	// Si está vacío, el componente se renderiza sin layout (partial).
+	// LayoutPath is the optional path to an enveloping layout.
+	// If empty, the component is rendered without a layout (partial).
 	LayoutPath string
 
-	// Handler es la función que provee los datos al template.
-	// Retorna cualquier valor que se pasará como data al template.
+	// Handler is the function that provides data to the template.
+	// It returns any value that will be passed as "data" to the template.
 	Handler func(ctx *Ctx) any
 }
