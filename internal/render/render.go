@@ -18,6 +18,8 @@ type Engine struct {
 	extension string
 	cache     map[string]*template.Template
 	mu        sync.RWMutex
+	cssCache  map[string]string
+	cssMu     sync.RWMutex
 	funcMap   template.FuncMap
 	isDebug   bool
 }
@@ -33,6 +35,7 @@ func New(directory string, extension string, isDebug bool) *Engine {
 		directory: directory,
 		extension: extension,
 		cache:     make(map[string]*template.Template),
+		cssCache:  make(map[string]string),
 		funcMap:   defaultFuncMap(),
 		isDebug:   isDebug,
 	}
@@ -58,10 +61,11 @@ func (e *Engine) Render(buffer io.Writer, name string, data any) error {
 }
 
 // RenderFile renders a component from its absolute/relative path,
-// optionally wrapped in a layout. This is the main method for
-// the co-located component system.
-func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath string, data any) error {
-	cacheKey := templatePath + "|" + layoutPath
+// optionally wrapped in a layout. If stylePath is set, the CSS is
+// injected as an inline <style> tag (in <head> for layouts, before
+// content for partials).
+func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any) error {
+	cacheKey := templatePath + "|" + layoutPath + "|" + stylePath
 
 	// 1. Search in cache
 	var tmpl *template.Template
@@ -100,6 +104,23 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath string, d
 			return fmt.Errorf("compiling template: %w", err)
 		}
 
+		// Inject component CSS as a "component-styles" block for layouts.
+		// The layout uses {{block "component-styles" .}}{{end}} in <head>.
+		if layoutPath != "" && stylePath != "" {
+			css, cssErr := e.loadCSS(stylePath)
+			if cssErr != nil {
+				return cssErr
+			}
+			if css != "" {
+				tmpl.Funcs(template.FuncMap{
+					"__css": func() template.CSS { return template.CSS(css) },
+				})
+				if _, err = tmpl.Parse(`{{define "component-styles"}}<style>{{__css}}</style>{{end}}`); err != nil {
+					return fmt.Errorf("injecting component CSS: %w", err)
+				}
+			}
+		}
+
 		if !e.isDebug {
 			e.mu.Lock()
 			e.cache[cacheKey] = tmpl
@@ -108,18 +129,60 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath string, d
 	}
 
 	// 3. Execute — same path for cache hit and miss.
-	// If no layout: execute the "content" block directly,
-	// because the root template is empty (everything lives inside {{define "content"}}).
 	if layoutPath == "" {
+		// Partial render: inject CSS inline before content.
+		if stylePath != "" {
+			css, err := e.loadCSS(stylePath)
+			if err != nil {
+				return err
+			}
+			if css != "" {
+				io.WriteString(buffer, "<style>")
+				io.WriteString(buffer, css)
+				io.WriteString(buffer, "</style>\n")
+			}
+		}
 		return tmpl.ExecuteTemplate(buffer, "content", data)
 	}
+	// Full render: CSS is already in the compiled template via "component-styles" block.
 	return tmpl.Execute(buffer, data)
 }
 
 // RenderPartial renders only a component fragment without a layout.
 // Useful for partial responses (HTMX, fetch, etc.).
-func (e *Engine) RenderPartial(buffer io.Writer, templatePath string, data any) error {
-	return e.RenderFile(buffer, templatePath, "", data)
+func (e *Engine) RenderPartial(buffer io.Writer, templatePath, stylePath string, data any) error {
+	return e.RenderFile(buffer, templatePath, "", stylePath, data)
+}
+
+// loadCSS reads and caches a CSS file's content.
+func (e *Engine) loadCSS(path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+
+	if !e.isDebug {
+		e.cssMu.RLock()
+		cached, ok := e.cssCache[path]
+		e.cssMu.RUnlock()
+		if ok {
+			return cached, nil
+		}
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading CSS %q: %w", path, err)
+	}
+
+	css := string(content)
+
+	if !e.isDebug {
+		e.cssMu.Lock()
+		e.cssCache[path] = css
+		e.cssMu.Unlock()
+	}
+
+	return css, nil
 }
 
 // getTemplate maintains compatibility with the legacy directory system.

@@ -28,7 +28,7 @@ func TestRenderFile(t *testing.T) {
 
 	t.Run("WithLayout", func(t *testing.T) {
 		var buf bytes.Buffer
-		err := engine.RenderFile(&buf, pagePath, layoutPath, "World")
+		err := engine.RenderFile(&buf, pagePath, layoutPath, "", "World")
 		if err != nil {
 			t.Fatalf("RenderFile failed: %v", err)
 		}
@@ -40,7 +40,7 @@ func TestRenderFile(t *testing.T) {
 
 	t.Run("NoLayout", func(t *testing.T) {
 		var buf bytes.Buffer
-		err := engine.RenderFile(&buf, pagePath, "", "World")
+		err := engine.RenderFile(&buf, pagePath, "", "", "World")
 		if err != nil {
 			t.Fatalf("RenderFile failed: %v", err)
 		}
@@ -63,7 +63,7 @@ func TestRenderCaching(t *testing.T) {
 	engine := New(tmpDir, ".html", false)
 
 	var buf bytes.Buffer
-	engine.RenderFile(&buf, pagePath, "", nil)
+	engine.RenderFile(&buf, pagePath, "", "", nil)
 	if buf.String() != "V1" {
 		t.Errorf("expected V1, got %q", buf.String())
 	}
@@ -74,7 +74,7 @@ func TestRenderCaching(t *testing.T) {
 	}
 
 	buf.Reset()
-	engine.RenderFile(&buf, pagePath, "", nil)
+	engine.RenderFile(&buf, pagePath, "", "", nil)
 	if buf.String() != "V1" {
 		t.Errorf("expected V1 (cached), got %q", buf.String())
 	}
@@ -82,7 +82,7 @@ func TestRenderCaching(t *testing.T) {
 	// Debug mode (isDebug = true)
 	engineDebug := New(tmpDir, ".html", true)
 	buf.Reset()
-	engineDebug.RenderFile(&buf, pagePath, "", nil)
+	engineDebug.RenderFile(&buf, pagePath, "", "", nil)
 	if buf.String() != "V2" {
 		t.Errorf("expected V2 (reloaded), got %q", buf.String())
 	}

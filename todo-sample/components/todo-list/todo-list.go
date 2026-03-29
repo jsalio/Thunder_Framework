@@ -11,6 +11,7 @@ import (
 var Comp = component.Component{
 	TemplatePath: componentDir() + "/todo-list.html",
 	LayoutPath:   layoutDir() + "/layout.html",
+	StylePath:    componentDir() + "/todo-list.css",
 	Handler: func(ctx *component.Ctx) any {
 		ts := ctx.State.Get("todos").(*todostore.TodoStore)
 		return map[string]any{

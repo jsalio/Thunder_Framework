@@ -27,6 +27,10 @@ type Component struct {
 	// If empty, the component is rendered without a layout (partial).
 	LayoutPath string
 
+	// StylePath is the optional path to the component's co-located .css file.
+	// If set, the CSS is injected as an inline <style> tag.
+	StylePath string
+
 	// Handler is the function that provides data to the template.
 	// It returns any value that will be passed as "data" to the template.
 	Handler func(ctx *Ctx) any

@@ -92,9 +92,9 @@ func (a *App) Component(pattern string, comp component.Component) {
 		// HTMX: renderizar solo el fragmento del componente (sin layout).
 		var err error
 		if isHTMXRequest(r) {
-			err = a.Renderer.RenderPartial(w, comp.TemplatePath, data)
+			err = a.Renderer.RenderPartial(w, comp.TemplatePath, comp.StylePath, data)
 		} else {
-			err = a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, data)
+			err = a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data)
 		}
 		if err != nil {
 			a.Logger.Error("error renderizando componente",
@@ -121,7 +121,7 @@ func (a *App) RenderComponent(w http.ResponseWriter, r *http.Request, comp compo
 		data = comp.Handler(ctx)
 	}
 
-	err := a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, data)
+	err := a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data)
 	if err != nil {
 		a.Logger.Error("error renderizando componente",
 			"template", comp.TemplatePath,
@@ -151,7 +151,7 @@ func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, com
 		data = comp.Handler(ctx)
 	}
 
-	err := a.Renderer.RenderPartial(w, comp.TemplatePath, data)
+	err := a.Renderer.RenderPartial(w, comp.TemplatePath, comp.StylePath, data)
 	if err != nil {
 		a.Logger.Error("error renderizando componente parcial",
 			"template", comp.TemplatePath,
