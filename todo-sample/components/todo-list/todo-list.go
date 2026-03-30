@@ -1,7 +1,6 @@
 package todolist
 
 import (
-	"net/http"
 	"os"
 	"strconv"
 	"thunder/internal"
@@ -19,53 +18,48 @@ var Comp = component.Component{
 		return map[string]any{
 			"Todos": ts.All(),
 			"Stats": ts.Stats(),
+			"name":  "Jorge",
 		}
 	},
 }
 
 // Register registra todas las rutas del componente TodoList.
 func Register(app *internal.App) {
-	// GET / — renderiza la lista completa
 	app.Component("/", Comp)
 
-	// POST /todos — agregar tarea
-	app.POST("/todos", func(w http.ResponseWriter, r *http.Request) {
-		ts := app.State.Get("todos").(*todostore.TodoStore)
-		r.ParseForm()
-		text := r.FormValue("text")
-		if text != "" {
+	// Agregar tarea
+	app.Action("/todos", Comp, func(ctx *component.Ctx) {
+		ts := ctx.State.Get("todos").(*todostore.TodoStore)
+		ctx.Request.ParseForm()
+		if text := ctx.Request.FormValue("text"); text != "" {
 			ts.Add(text)
 		}
-		checkSusscess(app, w, r)
 	})
 
-	// POST /todos/{id}/done — alternar completado
-	app.POST("/todos/{id}/done", func(w http.ResponseWriter, r *http.Request) {
-		ts := app.State.Get("todos").(*todostore.TodoStore)
-		if id, err := strconv.Atoi(r.PathValue("id")); err == nil {
+	// Alternar completado
+	app.Action("/todos/{id}/done", Comp, func(ctx *component.Ctx) {
+		ts := ctx.State.Get("todos").(*todostore.TodoStore)
+		if id, err := strconv.Atoi(ctx.Request.PathValue("id")); err == nil {
 			ts.Toggle(id)
 		}
-		checkSusscess(app, w, r)
 	})
 
-	// POST /todos/{id}/delete — eliminar tarea
-	app.POST("/todos/{id}/delete", func(w http.ResponseWriter, r *http.Request) {
-		ts := app.State.Get("todos").(*todostore.TodoStore)
-		if id, err := strconv.Atoi(r.PathValue("id")); err == nil {
+	// Eliminar tarea
+	app.Action("/todos/{id}/delete", Comp, func(ctx *component.Ctx) {
+		ts := ctx.State.Get("todos").(*todostore.TodoStore)
+		if id, err := strconv.Atoi(ctx.Request.PathValue("id")); err == nil {
 			ts.Delete(id)
 		}
-		checkSusscess(app, w, r)
 	})
 
-	// POST /todos/clear — limpiar completadas
-	app.POST("/todos/clear", func(w http.ResponseWriter, r *http.Request) {
-		ts := app.State.Get("todos").(*todostore.TodoStore)
+	// Limpiar completadas
+	app.Action("/todos/clear", Comp, func(ctx *component.Ctx) {
+		ts := ctx.State.Get("todos").(*todostore.TodoStore)
 		for _, t := range ts.All() {
 			if t.Done {
 				ts.Delete(t.ID)
 			}
 		}
-		checkSusscess(app, w, r)
 	})
 }
 
@@ -77,12 +71,4 @@ func componentDir() string {
 func layoutDir() string {
 	dir, _ := os.Getwd()
 	return dir + "/todo-sample/components/layout"
-}
-
-func checkSusscess(app *internal.App, w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("HX-Request") == "true" {
-		app.RenderComponentPartial(w, r, Comp)
-	} else {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	}
 }

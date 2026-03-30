@@ -106,6 +106,31 @@ func (a *App) Component(pattern string, comp component.Component) {
 	}))
 }
 
+// Action registra una acción POST asociada a un componente.
+// El handler ejecuta la mutación; el framework responde automáticamente:
+//   - HTMX: re-renderiza el componente como parcial
+//   - Normal: redirige al referer (o "/" por defecto)
+func (a *App) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
+	a.Router.POST(pattern, func(w http.ResponseWriter, r *http.Request) {
+		ctx := &component.Ctx{
+			State:   a.State,
+			Request: r,
+			Params:  extractParams(r),
+			Writer:  w,
+		}
+		handler(ctx)
+		if isHTMXRequest(r) {
+			a.RenderComponentPartial(w, r, comp)
+		} else {
+			ref := r.Referer()
+			if ref == "" {
+				ref = "/"
+			}
+			http.Redirect(w, r, ref, http.StatusSeeOther)
+		}
+	})
+}
+
 // RenderComponent renderiza un componente directamente desde un handler.
 // Útil cuando necesitas control adicional sobre la request antes de renderizar.
 func (a *App) RenderComponent(w http.ResponseWriter, r *http.Request, comp component.Component) {

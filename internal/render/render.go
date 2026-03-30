@@ -80,28 +80,33 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 
 	// 2. Compile if not in cache
 	if tmpl == nil {
-		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-			return fmt.Errorf("template %q not found", templatePath)
+		pageSrc, err := readAndPreprocessPage(templatePath)
+		if err != nil {
+			return err
 		}
 
-		var err error
 		if layoutPath != "" {
-			if _, err := os.Stat(layoutPath); os.IsNotExist(err) {
-				return fmt.Errorf("layout %q not found", layoutPath)
+			layoutSrc, err := readAndPreprocessLayout(layoutPath)
+			if err != nil {
+				return err
 			}
-			// The layout is the root template; the page is defined inside it.
+			// El layout es el template raíz; la página se define dentro.
 			tmpl, err = template.New(filepath.Base(layoutPath)).
 				Funcs(e.funcMap).
-				ParseFiles(layoutPath, templatePath)
+				Parse(layoutSrc)
+			if err != nil {
+				return fmt.Errorf("compiling layout: %w", err)
+			}
+			if _, err = tmpl.New(filepath.Base(templatePath)).Parse(pageSrc); err != nil {
+				return fmt.Errorf("compiling template: %w", err)
+			}
 		} else {
-			// No layout: render only the component fragment.
 			tmpl, err = template.New(filepath.Base(templatePath)).
 				Funcs(e.funcMap).
-				ParseFiles(templatePath)
-		}
-
-		if err != nil {
-			return fmt.Errorf("compiling template: %w", err)
+				Parse(pageSrc)
+			if err != nil {
+				return fmt.Errorf("compiling template: %w", err)
+			}
 		}
 
 		// Inject component CSS as a "component-styles" block for layouts.
@@ -152,6 +157,24 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 // Useful for partial responses (HTMX, fetch, etc.).
 func (e *Engine) RenderPartial(buffer io.Writer, templatePath, stylePath string, data any) error {
 	return e.RenderFile(buffer, templatePath, "", stylePath, data)
+}
+
+// readAndPreprocessPage lee un template de página/componente y aplica el preprocesador.
+func readAndPreprocessPage(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading template %q: %w", path, err)
+	}
+	return PreprocessPage(string(content)), nil
+}
+
+// readAndPreprocessLayout lee un template de layout y aplica el preprocesador.
+func readAndPreprocessLayout(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading template %q: %w", path, err)
+	}
+	return PreprocessLayout(string(content)), nil
 }
 
 // loadCSS reads and caches a CSS file's content.
