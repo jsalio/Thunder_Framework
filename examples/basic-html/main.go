@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"thunder/internal"
 
-	aboutpage "thunder/sample/components/about-page"
-	homepage "thunder/sample/components/home-page"
-	usercard "thunder/sample/components/user-card"
+	aboutpage "thunder/examples/basic-html/components/about-page"
+	homepage "thunder/examples/basic-html/components/home-page"
+	usercard "thunder/examples/basic-html/components/user-card"
 )
 
 func main() {

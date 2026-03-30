@@ -5,8 +5,8 @@ import (
 	"log"
 	"thunder/internal"
 
-	todolist "thunder/todo-sample/components/todo-list"
-	"thunder/todo-sample/store"
+	todolist "thunder/examples/todo-sample/components/todo-list"
+	"thunder/examples/todo-sample/store"
 )
 
 func main() {
