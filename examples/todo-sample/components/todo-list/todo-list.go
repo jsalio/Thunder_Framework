@@ -4,8 +4,8 @@ import (
 	"os"
 	"strconv"
 	todostore "thunder/examples/todo-sample/store"
-	"thunder/internal"
-	"thunder/internal/component"
+	"thunder"
+	"thunder/component"
 )
 
 // Comp define el componente TodoList: muestra la lista completa de tareas.

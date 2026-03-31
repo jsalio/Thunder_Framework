@@ -31,7 +31,7 @@ Create a directory `components/hello` with `hello.go` and `hello.html`:
 ```go
 package hello
 
-import "thunder/internal/component"
+import "thunder/component"
 
 var Comp = component.Component{
     TemplatePath: "hello.html",
@@ -54,14 +54,17 @@ var Comp = component.Component{
 package main
 
 import (
-    "thunder/internal"
+    "thunder"
     "thunder/examples/hello/components/hello"
 )
 
 func main() {
-    app := internal.NewApp()
+    app := thunder.NewApp()
     app.Component("/", hello.Comp)
-    app.Run(":8080")
+    app.Run(thunder.AppArgs{
+        AppName: "My App",
+        Port:    8080,
+    })
 }
 ```
 

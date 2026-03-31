@@ -2,8 +2,8 @@ package aboutpage
 
 import (
 	"os"
-	"thunder/internal"
-	"thunder/internal/component"
+	"thunder"
+	"thunder/component"
 )
 
 // Comp define el componente AboutPage: ruta, template y datos co-locados.

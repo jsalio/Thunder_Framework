@@ -4,13 +4,13 @@ import (
 	// "log"
 
 	"thunder/examples/login/components/hello"
-	"thunder/internal"
+	"thunder"
 )
 
 func main() {
-	app := internal.NewApp()
+	app := thunder.NewApp()
 	app.Component("/", hello.Comp)
-	app.Run(internal.AppArgs{
+	app.Run(thunder.AppArgs{
 		AppName: "Sample",
 		Port:    8086,
 	})

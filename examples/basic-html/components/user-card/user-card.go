@@ -2,8 +2,8 @@ package usercard
 
 import (
 	"os"
-	"thunder/internal"
-	"thunder/internal/component"
+	"thunder"
+	"thunder/component"
 )
 
 // Comp define el componente UserCard: ruta, template y datos co-locados.

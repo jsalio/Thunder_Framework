@@ -2,7 +2,7 @@ package hello
 
 import (
 	"os"
-	"thunder/internal/component"
+	"thunder/component"
 )
 
 var Comp = component.Component{

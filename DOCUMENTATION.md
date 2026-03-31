@@ -25,7 +25,7 @@ Thunder provides a thread-safe global state store using the `state` package. It 
 
 ### Usage Example
 ```go
-import "thunder/internal/state"
+import "thunder/state"
 
 s := state.New()
 s.Set("user_count", 42)
@@ -58,7 +58,7 @@ components/todo-list/
 ### Defining a Component
 
 ```go
-import "thunder/internal/component"
+import "thunder/component"
 
 var Comp = component.Component{
     TemplatePath: componentDir() + "/todo-list.html",
@@ -76,7 +76,7 @@ var Comp = component.Component{
 Components self-register all their routes via `Register(app)`:
 
 ```go
-func Register(app *internal.App) {
+func Register(app *thunder.App) {
     // GET route — renders the component
     app.Component("/", Comp)
 
@@ -92,11 +92,14 @@ The `main.go` stays clean:
 
 ```go
 func main() {
-    app := internal.NewApp()
+    app := thunder.NewApp()
     app.State.Set("items", store.New())
     app.Static("/static/", "./static")
     todolist.Register(app)
-    app.Run(":8080")
+    app.Run(thunder.AppArgs{
+        AppName: "Todo App",
+        Port:    8080,
+    })
 }
 ```
 
@@ -373,7 +376,7 @@ app.Action(pattern string, comp component.Component, handler func(ctx *component
 ### Usage Example
 
 ```go
-func Register(app *internal.App) {
+func Register(app *thunder.App) {
     app.Component("/", Comp)
 
     // Add item — only the mutation, no boilerplate
@@ -426,7 +429,7 @@ The `router` package is a lightweight wrapper around `http.ServeMux` with middle
 
 ### Usage Example
 ```go
-import "thunder/internal/router"
+import "thunder/router"
 
 r := router.New()
 
@@ -455,8 +458,8 @@ The `server` package handles graceful startup and shutdown.
 ### Usage Example
 ```go
 import (
-    "thunder/internal/router"
-    "thunder/internal/server"
+    "thunder/router"
+    "thunder/server"
 )
 
 r := router.New()

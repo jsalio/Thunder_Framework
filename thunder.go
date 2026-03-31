@@ -1,4 +1,4 @@
-package internal
+package thunder
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"thunder/internal/component"
-	"thunder/internal/render"
-	"thunder/internal/router"
-	"thunder/internal/server"
-	"thunder/internal/state"
+	"thunder/component"
+	"thunder/render"
+	"thunder/router"
+	"thunder/server"
+	"thunder/state"
 
 	"github.com/charmbracelet/lipgloss"
 )

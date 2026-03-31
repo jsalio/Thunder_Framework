@@ -2,8 +2,8 @@ package homepage
 
 import (
 	"os"
-	"thunder/internal"
-	"thunder/internal/component"
+	"thunder"
+	"thunder/component"
 )
 
 // Comp define el componente HomePage: ruta, template y datos co-locados.

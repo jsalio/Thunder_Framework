@@ -3,7 +3,7 @@ package component
 
 import (
 	"net/http"
-	"thunder/internal/state"
+	"thunder/state"
 )
 
 // Ctx is the context passed to a component's Handler.

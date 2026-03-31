@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"thunder/internal"
+	"thunder"
 
 	aboutpage "thunder/examples/basic-html/components/about-page"
 	homepage "thunder/examples/basic-html/components/home-page"
@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	app := internal.NewApp()
+	app := thunder.NewApp()
 
 	// ── Estado global (equivalente a signals en el AppComponent de Angular) ──
 	app.State.Set("siteName", "Thunder Framework")
@@ -33,7 +33,7 @@ func main() {
 		fmt.Fprintf(w, `{"version":"%s"}`, app.State.Get("version"))
 	})
 
-	if err := app.Run(internal.AppArgs{
+	if err := app.Run(thunder.AppArgs{
 		AppName: "Basic HTML Sample",
 		Port:    8080,
 	}); err != nil {
