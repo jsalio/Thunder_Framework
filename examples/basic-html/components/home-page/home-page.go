@@ -22,10 +22,10 @@ func Register(app *internal.App) {
 
 func componentDir() string {
 	dir, _ := os.Getwd()
-	return dir + "/sample/components/home-page"
+	return dir + "/examples/basic-html/components/home-page"
 }
 
 func layoutDir() string {
 	dir, _ := os.Getwd()
-	return dir + "/sample/components/layout"
+	return dir + "/examples/basic-html/components/layout"
 }

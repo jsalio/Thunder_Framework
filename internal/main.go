@@ -1,15 +1,24 @@
 package internal
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"thunder/internal/component"
 	"thunder/internal/render"
 	"thunder/internal/router"
 	"thunder/internal/server"
 	"thunder/internal/state"
+
+	"github.com/charmbracelet/lipgloss"
 )
+
+type AppArgs struct {
+	Port    int
+	AppName string
+}
 
 type App struct {
 	Renderer *render.Engine
@@ -196,8 +205,76 @@ func extractParams(r *http.Request) map[string]string {
 	return params
 }
 
+func Ternary[T any](condition bool, trueVal, falseVal T) T {
+	if condition {
+		return trueVal
+	}
+	return falseVal
+}
+
 // Run inicia el servidor HTTP en el puerto indicado.
-func (a *App) Run(addr string) error {
-	a.Logger.Info("servidor iniciando", "addr", addr)
-	return server.Start(addr, a.Router.Handler())
+func (a *App) Run(args AppArgs) error {
+	a.Logger.Info("servidor iniciando", "addr", args.Port)
+
+	isDefaultName := args.AppName == ""
+	isDefaultPort := args.Port == 0
+
+	defaultAppName := Ternary(isDefaultName, "Thunder", args.AppName)
+	defaultPort := Ternary(isDefaultPort, 8086, args.Port)
+
+	printBanner(defaultAppName, defaultPort)
+
+	return server.Start(":"+strconv.Itoa(defaultPort), a.Router.Handler())
+}
+
+var (
+	purple = lipgloss.Color("#7D56F4")
+	green  = lipgloss.Color("#04B575")
+	amber  = lipgloss.Color("#FFB100")
+	white  = lipgloss.Color("#FFFFFF")
+)
+
+func printBanner(appName string, port int) {
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(purple).
+		Padding(0, 1)
+
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(purple).
+		Padding(1, 2)
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(white)
+
+	urlStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#00ADD8")).
+		Underline(true)
+
+	appNameRow := lipgloss.JoinHorizontal(lipgloss.Center,
+		infoStyle.Render("App Name: "),
+		lipgloss.NewStyle().Bold(true).Render(appName),
+		" ",
+	)
+
+	portRow := lipgloss.JoinHorizontal(lipgloss.Center,
+		infoStyle.Render("Port:     "),
+		lipgloss.NewStyle().Bold(true).Render(strconv.Itoa(port)),
+		" ",
+	)
+
+	urlRow := infoStyle.Render("URL:      ") + urlStyle.Render(fmt.Sprintf("http://localhost:%d", port))
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		titleStyle.Render("⚡ THUNDER FRAMEWORK 0.1.0 ⚡"),
+		"",
+		appNameRow,
+		portRow,
+		urlRow,
+		"",
+		lipgloss.NewStyle().Italic(true).Faint(true).Render("Press Ctrl+C to stop"),
+	)
+
+	fmt.Println(borderStyle.Render(content))
 }

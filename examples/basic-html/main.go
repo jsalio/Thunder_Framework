@@ -19,7 +19,7 @@ func main() {
 	app.State.Set("version", "0.1")
 
 	// ── Archivos estáticos ──
-	app.Static("/static/", "./sample/static")
+	app.Static("/static/", "./examples/basic-html/static")
 
 	// ── Registrar componentes ──
 	// Cada componente conoce su propia ruta, su template y su handler.
@@ -33,15 +33,10 @@ func main() {
 		fmt.Fprintf(w, `{"version":"%s"}`, app.State.Get("version"))
 	})
 
-	fmt.Println(`
-  ╔══════════════════════════════════════╗
-  ║   Thunder Framework v0.1             ║
-  ║   Servidor en http://localhost:8080  ║
-  ║   Ctrl+C para detener                ║
-  ╚══════════════════════════════════════╝
-	`)
-
-	if err := app.Run(":8080"); err != nil {
+	if err := app.Run(internal.AppArgs{
+		AppName: "Basic HTML Sample",
+		Port:    8080,
+	}); err != nil {
 		log.Fatal(err)
 	}
 }

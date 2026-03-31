@@ -65,10 +65,10 @@ func Register(app *internal.App) {
 
 func componentDir() string {
 	dir, _ := os.Getwd()
-	return dir + "/todo-sample/components/todo-list"
+	return dir + "/examples/todo-sample/components/todo-list"
 }
 
 func layoutDir() string {
 	dir, _ := os.Getwd()
-	return dir + "/todo-sample/components/layout"
+	return dir + "/examples/todo-sample/components/layout"
 }

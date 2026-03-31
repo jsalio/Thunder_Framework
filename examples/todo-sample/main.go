@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"thunder/internal"
 
@@ -16,21 +15,14 @@ func main() {
 	app.State.Set("todos", store.New())
 
 	// ── Archivos estáticos ─────────────────────────────────────────────────
-	app.Static("/static/", "./todo-sample/static")
+	app.Static("/static/", "./examples/todo-sample/static")
 
-	// ── Componentes ────────────────────────────────────────────────────────
-	// Cada componente registra sus propias rutas (GET + POST).
 	todolist.Register(app)
 
-	fmt.Println(`
-  ╔══════════════════════════════════════╗
-  ║   Thunder TODO v0.1                  ║
-  ║   Servidor en http://localhost:8086  ║
-  ║   Ctrl+C para detener                ║
-  ╚══════════════════════════════════════╝
-	`)
-
-	if err := app.Run(":8086"); err != nil {
+	if err := app.Run(internal.AppArgs{
+		AppName: "Todo Sample",
+		Port:    8086,
+	}); err != nil {
 		log.Fatal(err)
 	}
 }
