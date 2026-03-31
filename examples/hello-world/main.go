@@ -1,10 +1,8 @@
 package main
 
 import (
-	// "log"
-
-	"thunder/examples/login/components/hello"
 	"thunder"
+	"thunder/examples/hello-world/components/hello"
 )
 
 func main() {

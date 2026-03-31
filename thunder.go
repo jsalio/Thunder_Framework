@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 	"thunder/component"
 	"thunder/render"
 	"thunder/router"
 	"thunder/server"
 	"thunder/state"
+	"crypto/rand"
+	"encoding/hex"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -25,6 +28,7 @@ type App struct {
 	Router   *router.Router
 	Logger   *slog.Logger
 	State    *state.State
+	Sessions *state.SessionStore
 }
 
 func NewApp() *App {
@@ -37,6 +41,7 @@ func NewApp() *App {
 		Router:   router.New(),
 		Logger:   logger,
 		State:    state.New(),
+		Sessions: state.NewSessionStore(),
 	}
 }
 
@@ -87,10 +92,11 @@ func (a *App) Render(w http.ResponseWriter, templateName string, data any) {
 func (a *App) Component(pattern string, comp component.Component) {
 	a.Router.Handle("GET "+pattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := &component.Ctx{
-			State:   a.State,
-			Request: r,
-			Params:  extractParams(r),
-			Writer:  w,
+			State:        a.State,
+			SessionState: a.getSessionState(w, r),
+			Request:      r,
+			Params:       extractParams(r),
+			Writer:       w,
 		}
 
 		var data any
@@ -122,10 +128,11 @@ func (a *App) Component(pattern string, comp component.Component) {
 func (a *App) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
 	a.Router.POST(pattern, func(w http.ResponseWriter, r *http.Request) {
 		ctx := &component.Ctx{
-			State:   a.State,
-			Request: r,
-			Params:  extractParams(r),
-			Writer:  w,
+			State:        a.State,
+			SessionState: a.getSessionState(w, r),
+			Request:      r,
+			Params:       extractParams(r),
+			Writer:       w,
 		}
 		handler(ctx)
 		if isHTMXRequest(r) {
@@ -144,10 +151,11 @@ func (a *App) Action(pattern string, comp component.Component, handler func(ctx 
 // Útil cuando necesitas control adicional sobre la request antes de renderizar.
 func (a *App) RenderComponent(w http.ResponseWriter, r *http.Request, comp component.Component) {
 	ctx := &component.Ctx{
-		State:   a.State,
-		Request: r,
-		Params:  extractParams(r),
-		Writer:  w,
+		State:        a.State,
+		SessionState: a.getSessionState(w, r),
+		Request:      r,
+		Params:       extractParams(r),
+		Writer:       w,
 	}
 
 	var data any
@@ -174,10 +182,11 @@ func isHTMXRequest(r *http.Request) bool {
 // Útil para respuestas HTMX desde handlers POST.
 func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, comp component.Component) {
 	ctx := &component.Ctx{
-		State:   a.State,
-		Request: r,
-		Params:  extractParams(r),
-		Writer:  w,
+		State:        a.State,
+		SessionState: a.getSessionState(w, r),
+		Request:      r,
+		Params:       extractParams(r),
+		Writer:       w,
 	}
 
 	var data any
@@ -205,6 +214,34 @@ func extractParams(r *http.Request) map[string]string {
 	return params
 }
 
+func (a *App) getSessionState(w http.ResponseWriter, r *http.Request) *state.State {
+	cookie, err := r.Cookie("thunder_session")
+	var sessionID string
+	if err != nil {
+		sessionID = generateSessionID()
+		http.SetCookie(w, &http.Cookie{
+			Name:     "thunder_session",
+			Value:    sessionID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   r.TLS != nil,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   3600,
+		})
+	} else {
+		sessionID = cookie.Value
+	}
+	return a.Sessions.Get(sessionID)
+}
+
+func generateSessionID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "static-session-id"
+	}
+	return hex.EncodeToString(b)
+}
+
 func Ternary[T any](condition bool, trueVal, falseVal T) T {
 	if condition {
 		return trueVal
@@ -215,6 +252,14 @@ func Ternary[T any](condition bool, trueVal, falseVal T) T {
 // Run inicia el servidor HTTP en el puerto indicado.
 func (a *App) Run(args AppArgs) error {
 	a.Logger.Info("servidor iniciando", "addr", args.Port)
+
+	// Start background session cleanup every minute
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for range ticker.C {
+			a.Sessions.Cleanup(1 * time.Hour) // 1 hour TTL
+		}
+	}()
 
 	isDefaultName := args.AppName == ""
 	isDefaultPort := args.Port == 0

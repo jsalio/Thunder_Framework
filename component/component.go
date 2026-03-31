@@ -10,10 +10,11 @@ import (
 // It's similar to Angular's injection context: accesses global state,
 // the request, route parameters, and the response writer.
 type Ctx struct {
-	State   *state.State
-	Request *http.Request
-	Params  map[string]string
-	Writer  http.ResponseWriter
+	State        *state.State
+	SessionState *state.State
+	Request      *http.Request
+	Params       map[string]string
+	Writer       http.ResponseWriter
 }
 
 // Component unites an HTML template with its data handler.

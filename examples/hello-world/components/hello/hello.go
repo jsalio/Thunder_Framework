@@ -15,5 +15,5 @@ var Comp = component.Component{
 
 func componentDir() string {
 	dir, _ := os.Getwd()
-	return dir + "/examples/login/components/hello"
+	return dir + "/examples/hello-world/components/hello"
 }
