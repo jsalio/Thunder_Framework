@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"thunder"
+	"thunder/examples/Dashboard/components/customers"
 	"thunder/examples/Dashboard/components/overview"
+	"thunder/examples/Dashboard/components/sales"
 	"thunder/examples/Dashboard/store"
 )
 
@@ -18,6 +20,8 @@ func main() {
 
 	// ── Components Registration ────────────────────────────────────────────
 	overview.Register(app)
+	sales.Register(app)
+	customers.Register(app)
 
 	// ── Server Start ───────────────────────────────────────────────────────
 	log.Println("Starting Sales Dashboard Example...")

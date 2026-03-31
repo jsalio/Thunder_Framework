@@ -20,15 +20,18 @@
                 ⚡ ThunderDash
             </div>
             <nav class="sidebar-nav">
-                <a href="/" class="nav-item active">
+                <a href="/" class="nav-item active"
+                   hx-get="/" hx-target=".app-main" hx-push-url="true" hx-swap="innerHTML">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     Overview
                 </a>
-                <a href="#" class="nav-item">
+                <a href="/sales" class="nav-item"
+                   hx-get="/sales" hx-target=".app-main" hx-push-url="true" hx-swap="innerHTML">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     Sales
                 </a>
-                <a href="#" class="nav-item">
+                <a href="/customers" class="nav-item"
+                   hx-get="/customers" hx-target=".app-main" hx-push-url="true" hx-swap="innerHTML">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     Customers
                 </a>
@@ -61,5 +64,28 @@
         </main>
     </div>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        // SPA navigation: update active nav item on HTMX swap
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            var path = window.location.pathname;
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(function(item) {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === path) {
+                    item.classList.add('active');
+                }
+            });
+        });
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', function() {
+            var path = window.location.pathname;
+            htmx.ajax('GET', path, {target: '.app-main', swap: 'innerHTML'});
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(function(item) {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === path) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
