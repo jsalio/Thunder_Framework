@@ -3,9 +3,9 @@ package todolist
 import (
 	"os"
 	"strconv"
-	todostore "thunder/examples/todo-sample/store"
 	"thunder"
 	"thunder/component"
+	todostore "thunder/examples/todo-sample/store"
 )
 
 // Comp define el componente TodoList: muestra la lista completa de tareas.
@@ -24,7 +24,7 @@ var Comp = component.Component{
 }
 
 // Register registra todas las rutas del componente TodoList.
-func Register(app *internal.App) {
+func Register(app *thunder.App) {
 	app.Component("/", Comp)
 
 	// Agregar tarea

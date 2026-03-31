@@ -20,7 +20,7 @@ var Comp = component.Component{
 }
 
 // Register registra el componente en el router del App.
-func Register(app *internal.App) {
+func Register(app *thunder.App) {
 	app.Component("/users/{id}", Comp)
 }
 
