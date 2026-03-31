@@ -5,36 +5,36 @@ import (
 	"strings"
 )
 
-// Preprocess transforma directivas Thunder (t-if, t-for, t-else, t-class-*)
-// en sintaxis de Go html/template. Se ejecuta antes del parser de Go.
+// Preprocess transforms Thunder directives (t-if, t-for, t-else, t-class-*)
+// into Go html/template syntax. It runs before the Go parser.
 //
-// Directivas soportadas:
+// Supported directives:
 //   - t-if="expr"           → {{if expr}}...{{end}}
-//   - t-else                → {{else}} (emparejado con t-if anterior)
-//   - t-else-if="expr"      → {{else if expr}} (emparejado con t-if anterior)
+//   - t-else                → {{else}} (paired with previous t-if)
+//   - t-else-if="expr"      → {{else if expr}} (paired with previous t-if)
 //   - t-for="expr"          → {{range expr}}...{{end}}
-//   - t-class-NAME="expr"   → agrega NAME al class condicionalmente
+//   - t-class-NAME="expr"   → conditionally adds NAME to class attribute
 //   - <t-title>text</t-title> → {{define "title"}}text{{end}}
 //
-// Cuando las directivas se usan en <template>, las etiquetas <template>
-// se eliminan y solo se emite el contenido interior.
+// When directives are used on <template> tags, the <template> tags
+// are removed and only the inner content is emitted.
 func Preprocess(src string) string {
 	src = processClassDirectives(src)
 	src = processBlockDirectives(src)
 	return src
 }
 
-// PreprocessPage procesa un template de página/componente.
-// Transforma <t-title>...</t-title> y auto-envuelve en {{define "content"}}...{{end}}.
-// Si el template ya contiene {{define }}, lo deja tal cual (retrocompatibilidad).
+// PreprocessPage processes a page/component template.
+// Transforms <t-title>...</t-title> and auto-wraps in {{define "content"}}...{{end}}.
+// If the template already contains {{define }}, it leaves it as is (backward compatibility).
 func PreprocessPage(src string) string {
 	src = processAutoDefine(src)
 	return Preprocess(src)
 }
 
-// PreprocessLayout procesa un template de layout.
-// Elimina el wrapper {{define "xxx"}}...{{end}} si existe, ya que
-// template.New(name).Parse(src) asigna el contenido al nombre automáticamente.
+// PreprocessLayout processes a layout template.
+// Removes the wrapper {{define "xxx"}}...{{end}} if it exists, since
+// template.New(name).Parse(src) assigns content to the name automatically.
 func PreprocessLayout(src string) string {
 	src = stripLayoutDefine(src)
 	return Preprocess(src)
@@ -43,10 +43,10 @@ func PreprocessLayout(src string) string {
 var reTTitle = regexp.MustCompile(`(?s)<t-title>(.*?)</t-title>`)
 var reLayoutDefine = regexp.MustCompile(`^\{\{define\s+"[^"]+"\}\}`)
 
-// processAutoDefine transforma <t-title> y envuelve el contenido
-// en {{define "content"}}...{{end}} automáticamente.
+// processAutoDefine transforms <t-title> and wraps the content
+// in {{define "content"}}...{{end}} automatically.
 func processAutoDefine(src string) string {
-	// Retrocompatibilidad: si ya usa {{define}}, no tocar.
+	// Backward compatibility: if it already uses {{define}}, don't touch.
 	if strings.Contains(src, "{{define ") {
 		return src
 	}
@@ -63,8 +63,8 @@ func processAutoDefine(src string) string {
 	return titleBlock + "{{define \"content\"}}\n" + content + "\n{{end}}\n"
 }
 
-// stripLayoutDefine elimina el wrapper {{define "xxx"}}...{{end}}
-// que envuelve todo el contenido del layout.
+// stripLayoutDefine removes the wrapper {{define "xxx"}}...{{end}}
+// that wraps the entire layout content.
 func stripLayoutDefine(src string) string {
 	trimmed := strings.TrimSpace(src)
 	if !reLayoutDefine.MatchString(trimmed) {
@@ -77,10 +77,10 @@ func stripLayoutDefine(src string) string {
 	return trimmed[loc[1] : len(trimmed)-len("{{end}}")]
 }
 
-// ── Utilidades de escaneo HTML ────────────────────────────────────────────
+// ── HTML Scanning Utilities ────────────────────────────────────────────────
 
-// findTagEnd encuentra el cierre '>' de una etiqueta abierta en pos,
-// respetando comillas en atributos.
+// findTagEnd finds the closing '>' of an open tag at pos,
+// respecting quotes in attributes.
 func findTagEnd(src string, pos int) int {
 	inQuote := byte(0)
 	for i := pos + 1; i < len(src); i++ {
@@ -98,7 +98,7 @@ func findTagEnd(src string, pos int) int {
 	return -1
 }
 
-// extractTagName extrae el nombre de etiqueta de una apertura "<tagname ...>".
+// extractTagName extracts the tag name from an opening "<tagname ...>".
 func extractTagName(tag string) string {
 	start := 1
 	for start < len(tag) && isSpace(tag[start]) {
@@ -111,7 +111,7 @@ func extractTagName(tag string) string {
 	return strings.ToLower(tag[start:end])
 }
 
-// extractClosingTagName extrae el nombre de "</tagname>".
+// extractClosingTagName extracts the name from "</tagname>".
 func extractClosingTagName(tag string) string {
 	start := 2 // skip "</"
 	for start < len(tag) && isSpace(tag[start]) {
@@ -128,7 +128,7 @@ func isSpace(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
-// isSelfClosing verifica si la etiqueta termina con "/>".
+// isSelfClosing checks if the tag ends with "/>".
 func isSelfClosing(tag string) bool {
 	for i := len(tag) - 2; i >= 0; i-- {
 		if tag[i] == '/' {
@@ -141,8 +141,8 @@ func isSelfClosing(tag string) bool {
 	return false
 }
 
-// findMatchingClose busca la etiqueta de cierre que corresponde a tagName,
-// comenzando desde startPos. Retorna (inicio de </tag, fin de </tag>).
+// findMatchingClose looks for the closing tag corresponding to tagName,
+// starting from startPos. Returns (start of </tag, end of </tag>).
 func findMatchingClose(src string, startPos int, tagName string) (int, int) {
 	depth := 1
 	pos := startPos
@@ -182,7 +182,7 @@ func findMatchingClose(src string, startPos int, tagName string) (int, int) {
 	return -1, -1
 }
 
-// ── Directivas de clase (t-class-*) ──────────────────────────────────────
+// ── Class Directives (t-class-*) ───────────────────────────────────────────
 
 var reClassDir = regexp.MustCompile(`\bt-class-([\w-]+)=(?:"([^"]*)"|'([^']*)')`)
 
@@ -199,7 +199,7 @@ func processClassDirectives(src string) string {
 		out.WriteString(src[pos : pos+idx])
 		pos += idx
 
-		// Saltar cierres y comentarios
+		// Skip closing tags and comments
 		if pos+1 < len(src) && (src[pos+1] == '/' || src[pos+1] == '!') {
 			end := findTagEnd(src, pos)
 			if end == -1 {
@@ -254,7 +254,7 @@ func transformClassTag(tag string) string {
 			return sub[1] + sub[2] + cond.String() + `"`
 		})
 	} else {
-		// Sin class existente: crear atributo antes del cierre
+		// No existing class: create attribute before closing
 		i := strings.LastIndex(tag, ">")
 		if i > 0 && tag[i-1] == '/' {
 			i--
@@ -265,7 +265,7 @@ func transformClassTag(tag string) string {
 	return cleanTagSpaces(tag)
 }
 
-// cleanTagSpaces limpia espacios extra fuera de comillas.
+// cleanTagSpaces cleans extra spaces outside of quotes.
 func cleanTagSpaces(tag string) string {
 	var out strings.Builder
 	inQuote := byte(0)
@@ -300,7 +300,7 @@ func cleanTagSpaces(tag string) string {
 	return r
 }
 
-// ── Directivas de bloque (t-if, t-for, t-else) ──────────────────────────
+// ── Block Directives (t-for, t-if, t-else) ─────────────────────────────────
 
 var reBlockDir = regexp.MustCompile(`\bt-(for|if|else-if|else)\b(?:=(?:"([^"]*)"|'([^']*)'))?`)
 
@@ -378,7 +378,7 @@ func applyBlockDirective(src string, loc *directiveLoc) string {
 	case "if":
 		return applyIf(src, loc)
 	default:
-		// t-else / t-else-if huérfano: solo limpiar el atributo
+		// Orphan t-else / t-else-if: just clean the attribute
 		cleaned := removeDirectiveAttr(src[loc.tagStart:loc.tagEnd])
 		return src[:loc.tagStart] + cleaned + src[loc.tagEnd:]
 	}
@@ -436,7 +436,7 @@ func applyIf(src string, loc *directiveLoc) string {
 		ifContent = cleaned + inner + closeTag
 	}
 
-	// Buscar t-else o t-else-if hermano después del cierre
+	// Look for sibling t-else or t-else-if after closing
 	elseLoc := findElseSibling(src, closeEnd)
 
 	if elseLoc == nil {
@@ -445,7 +445,7 @@ func applyIf(src string, loc *directiveLoc) string {
 			src[closeEnd:]
 	}
 
-	// Procesar el bloque else
+	// Process the else block
 	elseCleaned := removeDirectiveAttr(src[elseLoc.tagStart:elseLoc.tagEnd])
 	var elseContent string
 	var afterElse int
@@ -481,7 +481,7 @@ func applyIf(src string, loc *directiveLoc) string {
 		elseKeyword = "{{else if " + elseLoc.dirExpr + "}}"
 	}
 
-	// Preservar whitespace entre el if-close y el else-open
+	// Preserve whitespace between if-close and else-open
 	between := src[closeEnd:elseLoc.tagStart]
 
 	return src[:loc.tagStart] +
@@ -489,8 +489,8 @@ func applyIf(src string, loc *directiveLoc) string {
 		src[afterElse:]
 }
 
-// findElseSibling busca un elemento hermano con t-else o t-else-if
-// inmediatamente después de pos (solo whitespace intermedio).
+// findElseSibling looks for a sibling element with t-else or t-else-if
+// immediately after pos (only intermediate whitespace).
 func findElseSibling(src string, pos int) *directiveLoc {
 	i := pos
 	for i < len(src) && isSpace(src[i]) {

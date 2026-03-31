@@ -6,12 +6,12 @@ import (
 	"thunder/component"
 )
 
-// Comp define el componente UserCard: ruta, template y datos co-locados.
+// Comp defines the UserCard component: route, template, and co-located data.
 var Comp = component.Component{
 	TemplatePath: componentDir() + "/user-card.html",
 	LayoutPath:   layoutDir() + "/layout.html",
 	Handler: func(ctx *component.Ctx) any {
-		// r.PathValue() es la API nativa de Go 1.22 para parámetros de ruta.
+		// r.PathValue() is Go 1.22's native API for path parameters.
 		data := ctx.State.Snapshot()
 		data["ID"] = ctx.Request.PathValue("id")
 		data["Site"] = ctx.State.Get("siteName")
@@ -19,7 +19,7 @@ var Comp = component.Component{
 	},
 }
 
-// Register registra el componente en el router del App.
+// Register registers the component in the App's router.
 func Register(app *thunder.App) {
 	app.Component("/users/{id}", Comp)
 }

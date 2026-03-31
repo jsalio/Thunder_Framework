@@ -6,7 +6,7 @@ import (
 	"thunder/component"
 )
 
-// Comp define el componente AboutPage: ruta, template y datos co-locados.
+// Comp defines the AboutPage component: route, template, and co-located data.
 var Comp = component.Component{
 	TemplatePath: componentDir() + "/about-page.html",
 	LayoutPath:   layoutDir() + "/layout.html",
@@ -15,7 +15,7 @@ var Comp = component.Component{
 	},
 }
 
-// Register registra el componente en el router del App.
+// Register registers the component in the App's router.
 func Register(app *thunder.App) {
 	app.Component("/about", Comp)
 }

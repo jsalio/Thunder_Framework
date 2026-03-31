@@ -9,7 +9,7 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	// Usar un puerto dinámico (0)
+	// Use a dynamic port (0)
 	addr := "127.0.0.1:0"
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -21,24 +21,24 @@ func TestStart(t *testing.T) {
 		errChan <- err
 	}()
 
-	// Esperar un momento a que el servidor arranque
+	// Wait a moment for the server to start
 	time.Sleep(200 * time.Millisecond)
 
-	// Simular señal de interrupción para apagar el servidor
+	// Simulate interrupt signal to shut down the server
 	p, err := os.FindProcess(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}
 	
-	// Enviamos SIGTERM a nuestro propio proceso para que signal.Notify lo capture
+	// We send SIGTERM to our own process so signal.Notify captures it
 	p.Signal(syscall.SIGTERM)
 
 	select {
 	case err := <-errChan:
 		if err != nil && err != http.ErrServerClosed {
-			t.Errorf("Start falló con error inesperado: %v", err)
+			t.Errorf("Start failed with unexpected error: %v", err)
 		}
 	case <-time.After(2 * time.Second):
-		t.Error("timeout esperando que el servidor se apagara")
+		t.Error("timeout waiting for server to shut down")
 	}
 }

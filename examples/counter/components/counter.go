@@ -20,9 +20,11 @@ var Comp = component.Component{
 	},
 }
 
+// Register registers the component and its actions.
 func Register(app *thunder.App) {
 	app.Component("/", Comp)
 
+	// Action to increment.
 	app.Action("/increment", Comp, func(ctx *component.Ctx) {
 		app.Logger.Info("Incrementing session counter")
 		current := ctx.SessionState.Get("count")

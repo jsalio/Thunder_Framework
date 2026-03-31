@@ -90,7 +90,7 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 			if err != nil {
 				return err
 			}
-			// El layout es el template raíz; la página se define dentro.
+			// The layout is the root template; the page is defined inside.
 			tmpl, err = template.New(filepath.Base(layoutPath)).
 				Funcs(e.funcMap).
 				Parse(layoutSrc)
@@ -159,7 +159,7 @@ func (e *Engine) RenderPartial(buffer io.Writer, templatePath, stylePath string,
 	return e.RenderFile(buffer, templatePath, "", stylePath, data)
 }
 
-// readAndPreprocessPage lee un template de página/componente y aplica el preprocesador.
+// readAndPreprocessPage reads a page/component template and applies the preprocessor.
 func readAndPreprocessPage(path string) (string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -168,7 +168,7 @@ func readAndPreprocessPage(path string) (string, error) {
 	return PreprocessPage(string(content)), nil
 }
 
-// readAndPreprocessLayout lee un template de layout y aplica el preprocesador.
+// readAndPreprocessLayout reads a layout template and applies the preprocessor.
 func readAndPreprocessLayout(path string) (string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {

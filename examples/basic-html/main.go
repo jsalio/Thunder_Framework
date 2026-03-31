@@ -22,7 +22,7 @@ func main() {
 	app.Static("/static/", "./examples/basic-html/static")
 
 	// ── Registrar componentes ──
-	// Cada componente conoce su propia ruta, su template y su handler.
+	// Each component knows its own route, its template, and its handler.
 	// main.go solo los orquesta, no contiene lógica de vista.
 	homepage.Register(app)
 	aboutpage.Register(app)
