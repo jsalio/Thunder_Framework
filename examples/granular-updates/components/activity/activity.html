@@ -1,31 +1,23 @@
 <div class="activity-widget animate-fade-in">
     <div class="widget-header">
         <h2 class="widget-title">Team Activity</h2>
-        <span class="activity-count">{{.Count}} events</span>
+        <span class="activity-count">{{.Count}} events</spa n>
     </div>
 
     <!-- Filter Tabs -->
-    <div class="filter-tabs">
-        <button class="filter-tab" t-class-active='eq .Filter "all"'
-                hx-get="/widgets/activity?filter=all"
-                hx-target="#activity-widget"
-                hx-swap="innerHTML">All</button>
-        <button class="filter-tab" t-class-active='eq .Filter "comment"'
-                hx-get="/widgets/activity?filter=comment"
-                hx-target="#activity-widget"
-                hx-swap="innerHTML">Comments</button>
-        <button class="filter-tab" t-class-active='eq .Filter "commit"'
-                hx-get="/widgets/activity?filter=commit"
-                hx-target="#activity-widget"
-                hx-swap="innerHTML">Commits</button>
-        <button class="filter-tab" t-class-active='eq .Filter "review"'
-                hx-get="/widgets/activity?filter=review"
-                hx-target="#activity-widget"
-                hx-swap="innerHTML">Reviews</button>
+    <div class="filter-tabs" hx-ext="morph" hx-swap="morph:innerHTML">
+        <button class="filter-tab" t-class-active='eq .Filter "all"' hx-get="/widgets/activity?filter=all"
+            hx-target="#activity-widget" hx-swap="morph:innerHTML">All</button>
+        <button class="filter-tab" t-class-active='eq .Filter "comment"' hx-get="/widgets/activity?filter=comment"
+            hx-target="#activity-widget" hx-swap="morph:innerHTML">Comments</button>
+        <button class="filter-tab" t-class-active='eq .Filter "commit"' hx-get="/widgets/activity?filter=commit"
+            hx-target="#activity-widget" hx-swap="morph:innerHTML">Commits</button>
+        <button class="filter-tab" t-class-active='eq .Filter "review"' hx-get="/widgets/activity?filter=review"
+            hx-target="#activity-widget" hx-swap="morph:innerHTML">Reviews</button>
     </div>
 
     <!-- Activity Feed -->
-    <ul class="activity-feed">
+    <ul class="activity-feed" hx-ext="morph" hx-swap="morph:innerHTML">
         <li t-for=".Activities" class="activity-item">
             <div class="activity-avatar avatar-{{.Type}}">{{.Initial}}</div>
             <div class="activity-content">
