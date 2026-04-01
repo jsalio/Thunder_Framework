@@ -137,6 +137,57 @@ func TestPreprocessClassDirective(t *testing.T) {
 	}
 }
 
+func TestPreprocessMorph(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "basic t-morph adds both attributes",
+			in:   `<div class="widget" t-morph>content</div>`,
+			want: `<div class="widget" hx-swap="morph:innerHTML" hx-ext="morph">content</div>`,
+		},
+		{
+			name: "t-morph with existing hx-swap prefixes value",
+			in:   `<form t-morph hx-post="/add" hx-swap="innerHTML">ok</form>`,
+			want: `<form hx-post="/add" hx-swap="morph:innerHTML" hx-ext="morph">ok</form>`,
+		},
+		{
+			name: "t-morph with existing hx-ext merges",
+			in:   `<div t-morph hx-ext="other">ok</div>`,
+			want: `<div hx-ext="other morph" hx-swap="morph:innerHTML">ok</div>`,
+		},
+		{
+			name: "t-morph idempotent on already-prefixed swap",
+			in:   `<div t-morph hx-swap="morph:outerHTML">ok</div>`,
+			want: `<div hx-swap="morph:outerHTML" hx-ext="morph">ok</div>`,
+		},
+		{
+			name: "self-closing tag",
+			in:   `<input t-morph/>`,
+			want: `<input hx-swap="morph:innerHTML" hx-ext="morph"/>`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Preprocess(tt.in)
+			if got != tt.want {
+				t.Errorf("\ngot:  %s\nwant: %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPreprocessMorphCombined(t *testing.T) {
+	in := `<li t-for=".Items" t-morph hx-swap="innerHTML">{{.Name}}</li>`
+	want := `{{range .Items}}<li hx-swap="morph:innerHTML" hx-ext="morph">{{.Name}}</li>{{end}}`
+	got := Preprocess(in)
+	if got != want {
+		t.Errorf("\ngot:  %s\nwant: %s", got, want)
+	}
+}
+
 func TestPreprocessCombined(t *testing.T) {
 	in := `<li t-for=".Todos" class="item" t-class-done=".Done">{{.Text}}</li>`
 	want := `{{range .Todos}}<li class="item{{if .Done}} done{{end}}">{{.Text}}</li>{{end}}`

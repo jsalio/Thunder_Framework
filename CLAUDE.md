@@ -128,6 +128,7 @@ Thunder preprocesses HTML templates before Go's `html/template` parses them. Pag
 | `t-else-if` | `<div t-else-if=".Other">...</div>` | Else-if branch |
 | `t-for` | `<li t-for=".Items">{{.Name}}</li>` | Loop over collection |
 | `t-class-NAME` | `<div t-class-active=".IsActive">` | Conditionally add CSS class |
+| `t-morph` | `<div t-morph>...</div>` | Adds `hx-ext="morph"` and `hx-swap="morph:innerHTML"` (Idiomorph) |
 | `<t-title>` | `<t-title>My Page</t-title>` | Sets the page title block |
 | `<template>` | `<template t-if=".X">...</template>` | Invisible wrapper (stripped from output) |
 

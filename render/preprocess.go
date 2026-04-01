@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Preprocess transforms Thunder directives (t-if, t-for, t-else, t-class-*)
+// Preprocess transforms Thunder directives (t-if, t-for, t-else, t-class-*, t-morph)
 // into Go html/template syntax. It runs before the Go parser.
 //
 // Supported directives:
@@ -14,12 +14,14 @@ import (
 //   - t-else-if="expr"      → {{else if expr}} (paired with previous t-if)
 //   - t-for="expr"          → {{range expr}}...{{end}}
 //   - t-class-NAME="expr"   → conditionally adds NAME to class attribute
+//   - t-morph               → adds hx-ext="morph" hx-swap="morph:innerHTML"
 //   - <t-title>text</t-title> → {{define "title"}}text{{end}}
 //
 // When directives are used on <template> tags, the <template> tags
 // are removed and only the inner content is emitted.
 func Preprocess(src string) string {
 	src = processClassDirectives(src)
+	src = processMorphDirective(src)
 	src = processBlockDirectives(src)
 	return src
 }
@@ -298,6 +300,101 @@ func cleanTagSpaces(tag string) string {
 	r = strings.ReplaceAll(r, " >", ">")
 	r = strings.ReplaceAll(r, " />", "/>")
 	return r
+}
+
+// ── Morph Directive (t-morph) ────────────────────────────────────────────────
+
+var reMorphDir = regexp.MustCompile(`\bt-morph\b`)
+var reHxSwap = regexp.MustCompile(`hx-swap\s*=\s*"([^"]*)"`)
+var reHxExt = regexp.MustCompile(`hx-ext\s*=\s*"([^"]*)"`)
+
+// processMorphDirective replaces t-morph with hx-ext="morph" and
+// hx-swap="morph:innerHTML". If hx-swap already exists, its value
+// is prefixed with "morph:" (unless already prefixed).
+func processMorphDirective(src string) string {
+	var out strings.Builder
+	pos := 0
+
+	for pos < len(src) {
+		idx := strings.Index(src[pos:], "<")
+		if idx == -1 {
+			out.WriteString(src[pos:])
+			break
+		}
+		out.WriteString(src[pos : pos+idx])
+		pos += idx
+
+		// Skip closing tags and comments
+		if pos+1 < len(src) && (src[pos+1] == '/' || src[pos+1] == '!') {
+			end := findTagEnd(src, pos)
+			if end == -1 {
+				out.WriteString(src[pos:])
+				break
+			}
+			out.WriteString(src[pos:end])
+			pos = end
+			continue
+		}
+
+		end := findTagEnd(src, pos)
+		if end == -1 {
+			out.WriteString(src[pos:])
+			break
+		}
+
+		tag := src[pos:end]
+		if reMorphDir.MatchString(tag) {
+			tag = transformMorphTag(tag)
+		}
+		out.WriteString(tag)
+		pos = end
+	}
+
+	return out.String()
+}
+
+func transformMorphTag(tag string) string {
+	// Remove the t-morph attribute
+	tag = reMorphDir.ReplaceAllString(tag, "")
+
+	// Handle hx-swap: prefix existing value with "morph:" or add default
+	if reHxSwap.MatchString(tag) {
+		tag = reHxSwap.ReplaceAllStringFunc(tag, func(match string) string {
+			sub := reHxSwap.FindStringSubmatch(match)
+			val := sub[1]
+			if !strings.HasPrefix(val, "morph:") {
+				val = "morph:" + val
+			}
+			return `hx-swap="` + val + `"`
+		})
+	} else {
+		// No hx-swap: insert before closing >
+		i := strings.LastIndex(tag, ">")
+		if i > 0 && tag[i-1] == '/' {
+			i--
+		}
+		tag = tag[:i] + ` hx-swap="morph:innerHTML"` + tag[i:]
+	}
+
+	// Handle hx-ext: merge "morph" into existing value or add new
+	if reHxExt.MatchString(tag) {
+		tag = reHxExt.ReplaceAllStringFunc(tag, func(match string) string {
+			sub := reHxExt.FindStringSubmatch(match)
+			val := sub[1]
+			if !strings.Contains(val, "morph") {
+				val = val + " morph"
+			}
+			return `hx-ext="` + val + `"`
+		})
+	} else {
+		i := strings.LastIndex(tag, ">")
+		if i > 0 && tag[i-1] == '/' {
+			i--
+		}
+		tag = tag[:i] + ` hx-ext="morph"` + tag[i:]
+	}
+
+	return cleanTagSpaces(tag)
 }
 
 // ── Block Directives (t-for, t-if, t-else) ─────────────────────────────────
