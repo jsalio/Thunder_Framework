@@ -160,7 +160,9 @@ Component CSS (`StylePath`) is automatically injected into the `component-styles
 
 ## HTMX Integration
 
-Thunder has first-class HTMX support. When a request includes the `HX-Request: true` header:
+Thunder has first-class HTMX support. HTMX (`htmx.min.js`) and Idiomorph (`idiomorph-ext.min.js`) are **embedded in the framework binary** and auto-injected into layouts before `</body>` — no manual `<script>` tags or CDN dependencies needed. The files are served from `/__thunder/` routes with immutable caching headers.
+
+When a request includes the `HX-Request: true` header:
 - `app.Component()` renders the component **without layout** (partial HTML fragment).
 - `app.Action()` re-renders the component as a partial after executing the mutation handler.
 

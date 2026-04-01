@@ -37,9 +37,31 @@ func PreprocessPage(src string) string {
 // PreprocessLayout processes a layout template.
 // Removes the wrapper {{define "xxx"}}...{{end}} if it exists, since
 // template.New(name).Parse(src) assigns content to the name automatically.
+// Also auto-injects HTMX and Idiomorph script tags before </body>.
 func PreprocessLayout(src string) string {
 	src = stripLayoutDefine(src)
+	src = injectFrameworkScripts(src)
 	return Preprocess(src)
+}
+
+// frameworkScripts are the script tags injected before </body> in layouts.
+const frameworkScripts = `    <script src="/__thunder/htmx.min.js"></script>
+    <script src="/__thunder/idiomorph-ext.min.js"></script>
+`
+
+// injectFrameworkScripts inserts HTMX and Idiomorph <script> tags
+// before </body> in layout templates. Skips injection if the scripts
+// are already present or if </body> is not found.
+func injectFrameworkScripts(src string) string {
+	if strings.Contains(src, "/__thunder/") {
+		return src
+	}
+	lower := strings.ToLower(src)
+	idx := strings.LastIndex(lower, "</body>")
+	if idx == -1 {
+		return src
+	}
+	return src[:idx] + frameworkScripts + src[idx:]
 }
 
 var reTTitle = regexp.MustCompile(`(?s)<t-title>(.*?)</t-title>`)

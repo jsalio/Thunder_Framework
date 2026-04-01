@@ -248,6 +248,43 @@ func TestPreprocessPage(t *testing.T) {
 	}
 }
 
+func TestInjectFrameworkScripts(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "injects before </body>",
+			in:   "<html><body><main>content</main></body></html>",
+			want: "<html><body><main>content</main>" + frameworkScripts + "</body></html>",
+		},
+		{
+			name: "no body tag passes through",
+			in:   "<div>fragment</div>",
+			want: "<div>fragment</div>",
+		},
+		{
+			name: "already has __thunder skips injection",
+			in:   `<body><script src="/__thunder/htmx.min.js"></script></body>`,
+			want: `<body><script src="/__thunder/htmx.min.js"></script></body>`,
+		},
+		{
+			name: "case insensitive body tag",
+			in:   "<html><BODY>hi</BODY></html>",
+			want: "<html><BODY>hi" + frameworkScripts + "</BODY></html>",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := injectFrameworkScripts(tt.in)
+			if got != tt.want {
+				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPreprocessLayout(t *testing.T) {
 	tests := []struct {
 		name string

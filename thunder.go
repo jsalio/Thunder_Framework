@@ -251,6 +251,7 @@ func Ternary[T any](condition bool, trueVal, falseVal T) T {
 
 // Run starts the HTTP server on the indicated port.
 func (a *App) Run(args AppArgs) error {
+	a.registerAssetRoutes()
 	a.Logger.Info("server starting", "addr", args.Port)
 
 	// Start background session cleanup every minute

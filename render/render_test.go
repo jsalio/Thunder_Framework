@@ -32,7 +32,7 @@ func TestRenderFile(t *testing.T) {
 		if err != nil {
 			t.Fatalf("RenderFile failed: %v", err)
 		}
-		expected := `<html><body>Hello World!</body></html>`
+		expected := "<html><body>Hello World!" + frameworkScripts + "</body></html>"
 		if buf.String() != expected {
 			t.Errorf("expected %q, got %q", expected, buf.String())
 		}
