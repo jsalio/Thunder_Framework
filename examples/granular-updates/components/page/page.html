@@ -1,0 +1,28 @@
+{{define "content"}}
+<div class="page animate-fade-in">
+    <div class="page-header">
+        <h1 class="page-title">Project Dashboard</h1>
+        <p class="page-subtitle">Each widget below is an independent component with its own state and route. Interactions in one section never re-render the others.</p>
+    </div>
+
+    <div class="widget-grid">
+        <!-- Stats Widget: loaded independently, refreshes on its own -->
+        <div class="widget-container" id="stats-widget"
+             hx-get="/widgets/stats" hx-trigger="load" hx-swap="innerHTML">
+            <div class="widget-loading">Loading stats...</div>
+        </div>
+
+        <!-- Tasks Widget: add/toggle/delete only re-renders this section -->
+        <div class="widget-container widget-tall" id="tasks-widget"
+             hx-get="/widgets/tasks" hx-trigger="load" hx-swap="innerHTML">
+            <div class="widget-loading">Loading tasks...</div>
+        </div>
+
+        <!-- Activity Widget: filter tabs only re-render this section -->
+        <div class="widget-container widget-tall" id="activity-widget"
+             hx-get="/widgets/activity" hx-trigger="load" hx-swap="innerHTML">
+            <div class="widget-loading">Loading activity...</div>
+        </div>
+    </div>
+</div>
+{{end}}

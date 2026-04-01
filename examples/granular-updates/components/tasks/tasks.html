@@ -1,0 +1,48 @@
+<div class="tasks-widget animate-fade-in">
+    <div class="widget-header">
+        <h2 class="widget-title">Tasks</h2>
+        <div class="task-counts">
+            <span class="count-badge count-pending">{{.Pending}} pending</span>
+            <span class="count-badge count-done">{{.Done}} done</span>
+        </div>
+    </div>
+
+    <!-- Add Task Form -->
+    <form class="add-task-form" hx-post="/widgets/tasks/add" hx-target="#tasks-widget" hx-swap="innerHTML">
+        <input type="text" name="title" placeholder="Add a new task..." autocomplete="off" required>
+        <button type="submit" class="btn btn-add">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Add
+        </button>
+    </form>
+
+    <!-- Task List -->
+    <ul class="task-list">
+        <li t-for=".Tasks" class="task-item" t-class-task-done=".Done">
+            <button class="task-toggle" hx-post="/widgets/tasks/toggle" hx-target="#tasks-widget" hx-swap="innerHTML"
+                hx-vals='{"id":"{{.ID}}"}'>
+                <template t-if=".Done">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                </template>
+                <template t-else>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
+                </svg>
+                </template>
+            </button>
+            <span class="task-title">{{.Title}}</span>
+            <button class="task-delete" hx-post="/widgets/tasks/delete" hx-target="#tasks-widget" hx-swap="innerHTML"
+                hx-vals='{"id":"{{.ID}}"}'>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </li>
+    </ul>
+</div>
