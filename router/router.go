@@ -25,6 +25,11 @@ func (r *Router) Use(m Middleware) {
 	r.middlewares = append(r.middlewares, m)
 }
 
+// Prepend adds a middleware to the front of the stack (outermost execution).
+func (r *Router) Prepend(m Middleware) {
+	r.middlewares = append([]Middleware{m}, r.middlewares...)
+}
+
 // Handle registers a handler for the given pattern.
 func (r *Router) Handle(pattern string, handler http.Handler) {
 	r.mux.Handle(pattern, handler)
