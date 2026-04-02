@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "thunder_framework",
+  "project_id": "54f9ae47-f93e-441c-a3fe-3944ecee7623"
+}
