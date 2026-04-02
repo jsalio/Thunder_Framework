@@ -9,6 +9,7 @@ import (
 	"time"
 	"thunder/component"
 	"thunder/compress"
+	"thunder/recovery"
 	"thunder/render"
 	"thunder/router"
 	"thunder/server"
@@ -254,6 +255,8 @@ func Ternary[T any](condition bool, trueVal, falseVal T) T {
 // Run starts the HTTP server on the indicated port.
 func (a *App) Run(args AppArgs) error {
 	a.registerAssetRoutes()
+
+	a.Router.Prepend(recovery.Recover())
 
 	if !args.DisableCompression {
 		a.Router.Prepend(compress.Gzip())
