@@ -171,3 +171,7 @@ This enables seamless partial page updates without full page reloads.
 ## Session Management
 
 Sessions are cookie-based (`thunder_session` cookie). Session IDs are cryptographically random (16 bytes, hex-encoded). Cookies are `HttpOnly`, `SameSite=Lax`, with 1-hour `MaxAge`. Expired sessions are cleaned up automatically in the background. Hard limit of 5,000 concurrent sessions.
+
+## Work traking
+
+Use 'bd' for task tracking
