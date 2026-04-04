@@ -27,7 +27,7 @@ Module name is `thunder` (see go.mod). Go 1.24.0. Only external dependency is `l
 
 ## Architecture
 
-Thunder is a component-oriented Go web framework with co-located `.go` + `.html` + `.css` files per component. Packages live at the root level (`component/`, `render/`, `router/`, `server/`, `state/`). The main orchestrator is `thunder.go`.
+Thunder is a component-oriented Go web framework with co-located `.go` + `.html` + `.css` files per component. Packages live at the root level (`component/`, `compress/`, `csrf/`, `recovery/`, `render/`, `router/`, `server/`, `state/`). The main orchestrator is `thunder.go`.
 
 ### App (`thunder.go`)
 
@@ -53,6 +53,9 @@ Exported fields on `App`: `Renderer`, `Router`, `Logger`, `State`, `Sessions`.
 - **Renderer** (`render/`) — Go `html/template` engine with thread-safe caching (disabled in debug mode). Includes a **template preprocessor** that transforms Thunder directives into Go template syntax before parsing. Handles CSS injection and layout composition.
 - **State** (`state/`) — thread-safe `sync.RWMutex`-based key-value store. Two scopes: **global** (`app.State`, shared across all users) and **session** (per-user, managed via `SessionStore` with cookie-based session IDs).
 - **Server** (`server/`) — HTTP server with graceful shutdown (SIGTERM/SIGINT), 15s read/write timeouts, 60s idle timeout.
+- **CSRF** (`csrf/`) — Double-Submit Cookie CSRF protection. Middleware generates token in `thunder_csrf` cookie, validates on POST/PUT/DELETE/PATCH via `X-CSRF-Token` header or `_csrf` form field. Auto-injected into forms by the preprocessor and into HTMX requests via `htmx:configRequest`. Enabled by default; disable with `AppArgs.DisableCSRF`.
+- **Recovery** (`recovery/`) — Panic recovery middleware, logs stack traces and returns 500.
+- **Compress** (`compress/`) — Gzip compression middleware for eligible responses.
 
 ## Component System
 

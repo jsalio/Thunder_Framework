@@ -9,6 +9,7 @@ import (
 	"time"
 	"thunder/component"
 	"thunder/compress"
+	"thunder/csrf"
 	"thunder/recovery"
 	"thunder/render"
 	"thunder/router"
@@ -24,6 +25,8 @@ type AppArgs struct {
 	Port               int
 	AppName            string
 	DisableCompression bool
+	DisableCSRF        bool
+	CSRFExempt         []string // paths exempt from CSRF validation
 }
 
 type App struct {
@@ -108,11 +111,12 @@ func (a *App) Component(pattern string, comp component.Component) {
 		}
 
 		// HTMX: render only the component fragment (without layout).
+		token := csrf.Token(r)
 		var err error
 		if isHTMXRequest(r) {
-			err = a.Renderer.RenderPartial(w, comp.TemplatePath, comp.StylePath, data)
+			err = a.Renderer.RenderPartialWithCSRF(w, comp.TemplatePath, comp.StylePath, data, token)
 		} else {
-			err = a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data)
+			err = a.Renderer.RenderFileWithCSRF(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data, token)
 		}
 		if err != nil {
 			a.Logger.Error("error rendering component",
@@ -166,7 +170,7 @@ func (a *App) RenderComponent(w http.ResponseWriter, r *http.Request, comp compo
 		data = comp.Handler(ctx)
 	}
 
-	err := a.Renderer.RenderFile(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data)
+	err := a.Renderer.RenderFileWithCSRF(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data, csrf.Token(r))
 	if err != nil {
 		a.Logger.Error("error rendering component",
 			"template", comp.TemplatePath,
@@ -197,7 +201,7 @@ func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, com
 		data = comp.Handler(ctx)
 	}
 
-	err := a.Renderer.RenderPartial(w, comp.TemplatePath, comp.StylePath, data)
+	err := a.Renderer.RenderPartialWithCSRF(w, comp.TemplatePath, comp.StylePath, data, csrf.Token(r))
 	if err != nil {
 		a.Logger.Error("error rendering partial component",
 			"template", comp.TemplatePath,
@@ -257,6 +261,17 @@ func (a *App) Run(args AppArgs) error {
 	a.registerAssetRoutes()
 
 	a.Router.Prepend(recovery.Recover())
+
+	if !args.DisableCSRF {
+		cfg := csrf.Config{}
+		if len(args.CSRFExempt) > 0 {
+			cfg.Exempt = make(map[string]bool, len(args.CSRFExempt))
+			for _, p := range args.CSRFExempt {
+				cfg.Exempt[p] = true
+			}
+		}
+		a.Router.Use(csrf.Protect(cfg))
+	}
 
 	if !args.DisableCompression {
 		a.Router.Prepend(compress.Gzip())

@@ -23,6 +23,7 @@ func Preprocess(src string) string {
 	src = processClassDirectives(src)
 	src = processMorphDirective(src)
 	src = processBlockDirectives(src)
+	src = injectCSRFFields(src)
 	return src
 }
 
@@ -44,9 +45,44 @@ func PreprocessLayout(src string) string {
 	return Preprocess(src)
 }
 
+// csrfHiddenField is the hidden input injected before every </form>.
+// The csrfToken function is bound per-request via template.Clone() + Funcs().
+const csrfHiddenField = `<input type="hidden" name="_csrf" value="{{csrfToken}}">`
+
+// injectCSRFFields inserts a hidden CSRF token field before every </form> tag.
+func injectCSRFFields(src string) string {
+	const closeForm = "</form>"
+	if !strings.Contains(strings.ToLower(src), closeForm) {
+		return src
+	}
+
+	var out strings.Builder
+	lower := strings.ToLower(src)
+	pos := 0
+	for {
+		idx := strings.Index(lower[pos:], closeForm)
+		if idx == -1 {
+			out.WriteString(src[pos:])
+			break
+		}
+		out.WriteString(src[pos : pos+idx])
+		out.WriteString(csrfHiddenField)
+		out.WriteString(src[pos+idx : pos+idx+len(closeForm)])
+		pos += idx + len(closeForm)
+	}
+	return out.String()
+}
+
 // frameworkScripts are the script tags injected before </body> in layouts.
+// Includes HTMX, Idiomorph, and automatic CSRF header injection for HTMX requests.
 const frameworkScripts = `    <script src="/__thunder/htmx.min.js"></script>
     <script src="/__thunder/idiomorph-ext.min.js"></script>
+    <script>
+    document.addEventListener("htmx:configRequest", function(e) {
+        var c = document.cookie.match(/(?:^|;\s*)thunder_csrf=([^;]*)/);
+        if (c) e.detail.headers["X-CSRF-Token"] = c[1];
+    });
+    </script>
 `
 
 // injectFrameworkScripts inserts HTMX and Idiomorph <script> tags
