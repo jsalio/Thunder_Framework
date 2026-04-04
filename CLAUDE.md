@@ -36,6 +36,7 @@ Thunder is a component-oriented Go web framework with co-located `.go` + `.html`
 ```go
 app := thunder.NewApp()
 
+app.RegisterComponent("widget", widget.Comp)  // Global component, usable as <t-widget /> in templates
 app.Component("/", myComp)                    // Register component as GET route
 app.Action("/do-thing", myComp, actionFn)     // Register POST action tied to component
 app.GET("/api/data", handler)                 // Standard GET route
@@ -118,6 +119,41 @@ func Register(app *thunder.App) {
 - `app.RenderComponentPartial(w, r, comp)` — render without layout (HTML fragment).
 - `app.Render(w, templateName, data)` — legacy rendering from `templates/` directory.
 
+### Global Component Registry (`<t-NAME />`)
+
+Components can be registered globally and used declaratively in any template via custom HTML tags. This eliminates the need for `WithChild()` on every parent.
+
+**Registration (once in main.go or setup):**
+
+```go
+app.RegisterComponent("counter", counter.Comp)
+app.RegisterComponent("sidebar", sidebar.Comp)
+```
+
+**Usage in any template:**
+
+```html
+<div class="page">
+    <t-sidebar />
+    <h1>My Page</h1>
+    <t-counter />
+</div>
+```
+
+The `<t-NAME />` tag is resolved by a **dedicated component preprocessor** (`render/preprocess_component.go`) that runs before the directive preprocessor. It transforms `<t-NAME />` into `{{component "NAME"}}`, which the render engine resolves at runtime by executing the component's handler and rendering its template inline.
+
+**Preprocessor pipeline order:**
+
+1. **Component preprocessor** — resolves `<t-NAME />` tags (needs registry context)
+2. **Directive preprocessor** — resolves `t-if`, `t-for`, `t-class-*`, etc. (pure text)
+3. **Go `html/template` parser**
+
+**Rules:**
+- Only tags matching a registered component name are transformed. Unknown `<t-xyz />` tags are left untouched.
+- Reserved directives (`t-if`, `t-for`, `t-else`, `t-class-*`, `t-morph`, `t-title`) are never treated as components.
+- Both self-closing (`<t-name />`) and paired (`<t-name>...</t-name>`) forms work. Content inside paired tags is discarded.
+- Global components coexist with `WithChild()` — both `{{child "name"}}` and `{{component "name"}}` work in the same template.
+
 ## Template System
 
 ### Preprocessor Directives
@@ -133,6 +169,7 @@ Thunder preprocesses HTML templates before Go's `html/template` parses them. Pag
 | `t-class-NAME` | `<div t-class-active=".IsActive">` | Conditionally add CSS class |
 | `t-morph` | `<div t-morph>...</div>` | Adds `hx-ext="morph"` and `hx-swap="morph:innerHTML"` (Idiomorph) |
 | `<t-title>` | `<t-title>My Page</t-title>` | Sets the page title block |
+| `<t-NAME>` | `<t-counter />` | Renders a globally registered component inline |
 | `<template>` | `<template t-if=".X">...</template>` | Invisible wrapper (stripped from output) |
 
 Use single quotes for expressions containing double quotes: `t-if='gt (index .Stats "Done") 0'`.
@@ -159,7 +196,10 @@ Component CSS (`StylePath`) is automatically injected into the `component-styles
 
 ### Built-in Template Functions
 
-`safeHTML`, `safeJS`, `safeCSS`, `safeURL`, `safeAttr`, `year`. Custom functions via `app.Renderer.AddFunc(name, fn)`.
+`safeHTML`, `safeJS`, `safeCSS`, `safeURL`, `safeAttr`, `year`, `child`, `component`. Custom functions via `app.Renderer.AddFunc(name, fn)`.
+
+- `{{child "name"}}` — renders a child registered via `WithChild()` on the parent component.
+- `{{component "name"}}` — renders a globally registered component (via `app.RegisterComponent()`).
 
 ## HTMX Integration
 
