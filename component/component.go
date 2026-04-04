@@ -4,6 +4,7 @@ package component
 import (
 	"net/http"
 
+	"github.com/jsalio/thunder_framework/form"
 	"github.com/jsalio/thunder_framework/state"
 )
 
@@ -16,6 +17,17 @@ type Ctx struct {
 	Request      *http.Request
 	Params       map[string]string
 	Writer       http.ResponseWriter
+}
+
+// FormDecode parses the request's form data into a new instance of T.
+// Fields are matched by the "form" struct tag. Validates "validate:required" tags.
+//
+//	type Login struct {
+//	    Email string `form:"email" validate:"required"`
+//	}
+//	data, err := form.Decode[Login](ctx.Request)
+func FormDecode[T any](ctx *Ctx) (T, error) {
+	return form.Decode[T](ctx.Request)
 }
 
 // Component unites an HTML template with its data handler.
