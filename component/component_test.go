@@ -3,7 +3,8 @@ package component
 import (
 	"net/http/httptest"
 	"testing"
-	"thunder/state"
+
+	"github.com/jsalio/thunder_framework/state"
 )
 
 func TestCtx(t *testing.T) {

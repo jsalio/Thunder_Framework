@@ -3,8 +3,9 @@ package stats
 import (
 	"math/rand"
 	"os"
-	"thunder"
-	"thunder/component"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
 )
 
 // StatsData holds the project statistics stored in session state.

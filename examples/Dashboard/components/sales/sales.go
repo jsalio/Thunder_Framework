@@ -2,9 +2,10 @@ package sales
 
 import (
 	"os"
-	"thunder"
-	"thunder/component"
-	"thunder/examples/Dashboard/store"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
+	"github.com/jsalio/thunder_framework/examples/Dashboard/store"
 )
 
 // ChartBar holds pre-computed data for a bar in the chart.

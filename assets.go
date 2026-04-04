@@ -5,7 +5,8 @@ import (
 	"compress/gzip"
 	_ "embed"
 	"net/http"
-	"thunder/compress"
+
+	"github.com/jsalio/thunder_framework/compress"
 )
 
 //go:embed assets/js/htmx.min.js

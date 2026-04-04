@@ -2,10 +2,10 @@ package main
 
 import (
 	"log"
-	"thunder"
 
-	todolist "thunder/examples/todo-sample/components/todo-list"
-	"thunder/examples/todo-sample/store"
+	thunder "github.com/jsalio/thunder_framework"
+	todolist "github.com/jsalio/thunder_framework/examples/todo-sample/components/todo-list"
+	"github.com/jsalio/thunder_framework/examples/todo-sample/store"
 )
 
 func main() {

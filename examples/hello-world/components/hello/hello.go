@@ -2,7 +2,8 @@ package hello
 
 import (
 	"os"
-	"thunder/component"
+
+	"github.com/jsalio/thunder_framework/component"
 )
 
 var Comp = component.Component{

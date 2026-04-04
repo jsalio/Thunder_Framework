@@ -3,7 +3,8 @@ package component
 
 import (
 	"net/http"
-	"thunder/state"
+
+	"github.com/jsalio/thunder_framework/state"
 )
 
 // Ctx is the context passed to a component's Handler.

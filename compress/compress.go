@@ -10,7 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"thunder/router"
+
+	"github.com/jsalio/thunder_framework/router"
 )
 
 // Config holds gzip compression settings.
@@ -30,19 +31,19 @@ type Config struct {
 }
 
 var defaultCompressibleTypes = map[string]bool{
-	"text/html":                true,
-	"text/css":                 true,
-	"text/plain":               true,
-	"text/xml":                 true,
-	"text/javascript":          true,
-	"application/javascript":   true,
-	"application/json":         true,
-	"application/xml":          true,
-	"application/xhtml+xml":    true,
-	"application/rss+xml":      true,
-	"application/atom+xml":     true,
-	"application/wasm":         true,
-	"image/svg+xml":            true,
+	"text/html":              true,
+	"text/css":               true,
+	"text/plain":             true,
+	"text/xml":               true,
+	"text/javascript":        true,
+	"application/javascript": true,
+	"application/json":       true,
+	"application/xml":        true,
+	"application/xhtml+xml":  true,
+	"application/rss+xml":    true,
+	"application/atom+xml":   true,
+	"application/wasm":       true,
+	"image/svg+xml":          true,
 }
 
 // AcceptsGzip returns true if the request accepts gzip encoding.

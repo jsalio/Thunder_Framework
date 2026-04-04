@@ -2,17 +2,18 @@ package activity
 
 import (
 	"os"
-	"thunder"
-	"thunder/component"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
 )
 
 // Activity represents a team activity entry.
 type Activity struct {
-	User   string
-	Action string
-	Target string
-	Time   string
-	Type   string // "comment", "commit", "review"
+	User    string
+	Action  string
+	Target  string
+	Time    string
+	Type    string // "comment", "commit", "review"
 	Initial string
 }
 

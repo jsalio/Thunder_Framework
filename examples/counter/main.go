@@ -1,8 +1,8 @@
 package main
 
 import (
-	"thunder"
-	"thunder/examples/counter/components"
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/examples/counter/components"
 )
 
 func main() {

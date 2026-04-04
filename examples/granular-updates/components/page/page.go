@@ -2,8 +2,9 @@ package page
 
 import (
 	"os"
-	"thunder"
-	"thunder/component"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
 )
 
 // Comp defines the main page shell that loads widgets via HTMX.

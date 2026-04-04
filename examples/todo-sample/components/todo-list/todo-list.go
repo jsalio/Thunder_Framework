@@ -3,9 +3,10 @@ package todolist
 import (
 	"os"
 	"strconv"
-	"thunder"
-	"thunder/component"
-	todostore "thunder/examples/todo-sample/store"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
+	todostore "github.com/jsalio/thunder_framework/examples/todo-sample/store"
 )
 
 // Comp defines the TodoList component: displays the complete list of tasks.

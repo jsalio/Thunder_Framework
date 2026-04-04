@@ -1,24 +1,24 @@
 package thunder
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
-	"thunder/component"
-	"thunder/compress"
-	"thunder/csrf"
-	"thunder/recovery"
-	"thunder/render"
-	"thunder/router"
-	"thunder/server"
-	"thunder/state"
-	"crypto/rand"
-	"encoding/hex"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jsalio/thunder_framework/component"
+	"github.com/jsalio/thunder_framework/compress"
+	"github.com/jsalio/thunder_framework/csrf"
+	"github.com/jsalio/thunder_framework/recovery"
+	"github.com/jsalio/thunder_framework/render"
+	"github.com/jsalio/thunder_framework/router"
+	"github.com/jsalio/thunder_framework/server"
+	"github.com/jsalio/thunder_framework/state"
 )
 
 type AppArgs struct {

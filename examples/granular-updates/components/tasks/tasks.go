@@ -3,8 +3,9 @@ package tasks
 import (
 	"os"
 	"strconv"
-	"thunder"
-	"thunder/component"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
 )
 
 // Task represents a single task item.
