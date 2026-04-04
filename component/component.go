@@ -36,4 +36,12 @@ type Component struct {
 	// Handler is the function that provides data to the template.
 	// It returns any value that will be passed as "data" to the template.
 	Handler func(ctx *Ctx) any
+
+	// Children maps logical names to child components for template composition.
+	// Use {{child "name"}} in templates to render a child inline.
+	Children map[string]Component
+
+	// dir is the auto-detected directory of the component's .go file.
+	// Used internally to resolve relative paths in WithLayout, WithStyle, etc.
+	dir string
 }

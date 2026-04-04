@@ -1,8 +1,6 @@
 package activity
 
 import (
-	"os"
-
 	thunder "github.com/jsalio/thunder_framework"
 	"github.com/jsalio/thunder_framework/component"
 )
@@ -29,10 +27,7 @@ var allActivities = []Activity{
 }
 
 // Comp defines the activity feed widget (no layout — always renders as fragment).
-var Comp = component.Component{
-	TemplatePath: componentDir() + "/activity.html",
-	StylePath:    componentDir() + "/activity.css",
-	Handler: func(ctx *component.Ctx) any {
+var Comp = component.New(func(ctx *component.Ctx) any {
 		// Read filter from query param, fall back to session, default "all"
 		filter := ctx.Request.URL.Query().Get("filter")
 		if filter == "" {
@@ -56,15 +51,9 @@ var Comp = component.Component{
 			"Filter":     filter,
 			"Count":      len(filtered),
 		}
-	},
-}
+})
 
 // Register adds the activity widget route.
 func Register(app *thunder.App) {
 	app.Component("/widgets/activity", Comp)
-}
-
-func componentDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/granular-updates/components/activity"
 }

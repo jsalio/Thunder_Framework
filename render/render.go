@@ -3,6 +3,7 @@
 package render
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -66,14 +67,20 @@ func (e *Engine) Render(buffer io.Writer, name string, data any) error {
 // content for partials).
 // RenderFileWithCSRF is like RenderFile but binds a CSRF token for template use.
 func (e *Engine) RenderFileWithCSRF(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string) error {
-	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, csrfToken)
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, csrfToken, nil)
 }
 
 func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any) error {
-	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, "")
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, "", nil)
 }
 
-func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string) error {
+// RenderWithFuncs renders a component with additional per-request template functions.
+// Used by the child composition system to inject {{child "name"}} into templates.
+func (e *Engine) RenderWithFuncs(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string, extraFuncs template.FuncMap) error {
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, csrfToken, extraFuncs)
+}
+
+func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string, extraFuncs template.FuncMap) error {
 	cacheKey := templatePath + "|" + layoutPath + "|" + stylePath
 
 	// 1. Search in cache
@@ -143,16 +150,21 @@ func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 	}
 
 	// 3. Execute — same path for cache hit and miss.
-	// Bind CSRF token per-request via clone so the cached template is not mutated.
+	// Clone the template for per-request functions (CSRF token, child components).
 	execTmpl := tmpl
-	if csrfToken != "" {
+	if csrfToken != "" || len(extraFuncs) > 0 {
 		cloned, err := tmpl.Clone()
 		if err != nil {
-			return fmt.Errorf("cloning template for CSRF: %w", err)
+			return fmt.Errorf("cloning template: %w", err)
 		}
-		cloned.Funcs(template.FuncMap{
-			"csrfToken": func() string { return csrfToken },
-		})
+		funcs := template.FuncMap{}
+		if csrfToken != "" {
+			funcs["csrfToken"] = func() string { return csrfToken }
+		}
+		for k, v := range extraFuncs {
+			funcs[k] = v
+		}
+		cloned.Funcs(funcs)
 		execTmpl = cloned
 	}
 
@@ -175,15 +187,26 @@ func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 	return execTmpl.Execute(buffer, data)
 }
 
+// RenderPartialToString renders a component as a partial (no layout) and returns the HTML string.
+// Used internally for child component composition — the parent template calls {{child "name"}}
+// which triggers this to render the child inline.
+func (e *Engine) RenderPartialToString(templatePath, stylePath string, data any, csrfToken string) (string, error) {
+	var buf bytes.Buffer
+	if err := e.renderFile(&buf, templatePath, "", stylePath, data, csrfToken, nil); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // RenderPartial renders only a component fragment without a layout.
 // Useful for partial responses (HTMX, fetch, etc.).
 func (e *Engine) RenderPartial(buffer io.Writer, templatePath, stylePath string, data any) error {
-	return e.renderFile(buffer, templatePath, "", stylePath, data, "")
+	return e.renderFile(buffer, templatePath, "", stylePath, data, "", nil)
 }
 
 // RenderPartialWithCSRF is like RenderPartial but binds a CSRF token.
 func (e *Engine) RenderPartialWithCSRF(buffer io.Writer, templatePath, stylePath string, data any, csrfToken string) error {
-	return e.renderFile(buffer, templatePath, "", stylePath, data, csrfToken)
+	return e.renderFile(buffer, templatePath, "", stylePath, data, csrfToken, nil)
 }
 
 // readAndPreprocessPage reads a page/component template and applies the preprocessor.
@@ -285,6 +308,7 @@ func defaultFuncMap() template.FuncMap {
 		"safeAttr":  secureAttr,
 		"year":      year,
 		"csrfToken": func() string { return "" },
+		"child":     func(name string) template.HTML { return "" },
 	}
 }
 

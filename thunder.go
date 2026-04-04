@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"html/template"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/jsalio/thunder_framework/component"
 	"github.com/jsalio/thunder_framework/compress"
@@ -110,10 +112,18 @@ func (a *App) Component(pattern string, comp component.Component) {
 			data = comp.Handler(ctx)
 		}
 
-		// HTMX: render only the component fragment (without layout).
 		token := csrf.Token(r)
+		childFuncs := a.buildChildFunc(ctx, comp.Children, token)
+
 		var err error
-		if isHTMXRequest(r) {
+		if childFuncs != nil {
+			// Component has children — use RenderWithFuncs to inject {{child}}.
+			layoutPath := comp.LayoutPath
+			if isHTMXRequest(r) {
+				layoutPath = ""
+			}
+			err = a.Renderer.RenderWithFuncs(w, comp.TemplatePath, layoutPath, comp.StylePath, data, token, childFuncs)
+		} else if isHTMXRequest(r) {
 			err = a.Renderer.RenderPartialWithCSRF(w, comp.TemplatePath, comp.StylePath, data, token)
 		} else {
 			err = a.Renderer.RenderFileWithCSRF(w, comp.TemplatePath, comp.LayoutPath, comp.StylePath, data, token)
@@ -208,6 +218,38 @@ func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, com
 			"error", err,
 		)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+
+// buildChildFunc creates the per-request {{child "name"}} template function.
+// It captures the current ctx and component's children map, so each call to
+// {{child "name"}} executes the child's handler and renders it as an inline partial.
+func (a *App) buildChildFunc(ctx *component.Ctx, children map[string]component.Component, csrfToken string) template.FuncMap {
+	if len(children) == 0 {
+		return nil
+	}
+	return template.FuncMap{
+		"child": func(name string) template.HTML {
+			child, ok := children[name]
+			if !ok {
+				a.Logger.Error("child component not found", "name", name)
+				return template.HTML("<!-- child " + name + " not found -->")
+			}
+			var data any
+			if child.Handler != nil {
+				data = child.Handler(ctx)
+			}
+			html, err := a.Renderer.RenderPartialToString(child.TemplatePath, child.StylePath, data, csrfToken)
+			if err != nil {
+				a.Logger.Error("error rendering child component",
+					"name", name,
+					"template", child.TemplatePath,
+					"error", err,
+				)
+				return template.HTML("<!-- error rendering child " + name + " -->")
+			}
+			return template.HTML(html)
+		},
 	}
 }
 
