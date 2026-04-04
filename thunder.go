@@ -32,11 +32,12 @@ type AppArgs struct {
 }
 
 type App struct {
-	Renderer *render.Engine
-	Router   *router.Router
-	Logger   *slog.Logger
-	State    *state.State
-	Sessions *state.SessionStore
+	Renderer   *render.Engine
+	Router     *router.Router
+	Logger     *slog.Logger
+	State      *state.State
+	Sessions   *state.SessionStore
+	components map[string]component.Component
 }
 
 func NewApp() *App {
@@ -45,11 +46,12 @@ func NewApp() *App {
 	}))
 
 	return &App{
-		Renderer: render.New("templates", ".html", false),
-		Router:   router.New(),
-		Logger:   logger,
-		State:    state.New(),
-		Sessions: state.NewSessionStore(),
+		Renderer:   render.New("templates", ".html", false),
+		Router:     router.New(),
+		Logger:     logger,
+		State:      state.New(),
+		Sessions:   state.NewSessionStore(),
+		components: make(map[string]component.Component),
 	}
 }
 
@@ -58,6 +60,27 @@ func NewAppDebug(debug bool) *App {
 		Renderer: render.New("templates", ".html", debug),
 		State:    state.New(),
 	}
+}
+
+// RegisterComponent adds a component to the global registry.
+// Registered components can be used in any template as <t-NAME />.
+func (a *App) RegisterComponent(name string, comp component.Component) {
+	a.components[name] = comp
+	a.syncKnownComponents()
+}
+
+// syncKnownComponents updates the render engine with the current set of registered names.
+func (a *App) syncKnownComponents() {
+	known := make(map[string]bool, len(a.components))
+	for name := range a.components {
+		known[name] = true
+	}
+	a.Renderer.SetKnownComponents(known)
+}
+
+// Components returns the registered component registry (read-only use).
+func (a *App) Components() map[string]component.Component {
+	return a.components
 }
 
 func (a *App) GET(pattern string, handler http.HandlerFunc) {
@@ -113,11 +136,11 @@ func (a *App) Component(pattern string, comp component.Component) {
 		}
 
 		token := csrf.Token(r)
-		childFuncs := a.buildChildFunc(ctx, comp.Children, token)
+		childFuncs := a.buildTemplateFuncs(ctx, comp.Children, token)
 
 		var err error
 		if childFuncs != nil {
-			// Component has children — use RenderWithFuncs to inject {{child}}.
+			// Has children or global components — use RenderWithFuncs to inject {{child}}/{{component}}.
 			layoutPath := comp.LayoutPath
 			if isHTMXRequest(r) {
 				layoutPath = ""
@@ -221,15 +244,21 @@ func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, com
 	}
 }
 
-// buildChildFunc creates the per-request {{child "name"}} template function.
-// It captures the current ctx and component's children map, so each call to
-// {{child "name"}} executes the child's handler and renders it as an inline partial.
-func (a *App) buildChildFunc(ctx *component.Ctx, children map[string]component.Component, csrfToken string) template.FuncMap {
-	if len(children) == 0 {
+// buildTemplateFuncs creates per-request template functions for {{child "name"}}
+// and {{component "name"}}. The child function resolves from the component's
+// Children map; the component function resolves from the global registry.
+func (a *App) buildTemplateFuncs(ctx *component.Ctx, children map[string]component.Component, csrfToken string) template.FuncMap {
+	hasChildren := len(children) > 0
+	hasGlobalComponents := len(a.components) > 0
+
+	if !hasChildren && !hasGlobalComponents {
 		return nil
 	}
-	return template.FuncMap{
-		"child": func(name string) template.HTML {
+
+	funcs := template.FuncMap{}
+
+	if hasChildren {
+		funcs["child"] = func(name string) template.HTML {
 			child, ok := children[name]
 			if !ok {
 				a.Logger.Error("child component not found", "name", name)
@@ -249,8 +278,34 @@ func (a *App) buildChildFunc(ctx *component.Ctx, children map[string]component.C
 				return template.HTML("<!-- error rendering child " + name + " -->")
 			}
 			return template.HTML(html)
-		},
+		}
 	}
+
+	if hasGlobalComponents {
+		funcs["component"] = func(name string) template.HTML {
+			comp, ok := a.components[name]
+			if !ok {
+				a.Logger.Error("registered component not found", "name", name)
+				return template.HTML("<!-- component " + name + " not found -->")
+			}
+			var data any
+			if comp.Handler != nil {
+				data = comp.Handler(ctx)
+			}
+			html, err := a.Renderer.RenderPartialToString(comp.TemplatePath, comp.StylePath, data, csrfToken)
+			if err != nil {
+				a.Logger.Error("error rendering component",
+					"name", name,
+					"template", comp.TemplatePath,
+					"error", err,
+				)
+				return template.HTML("<!-- error rendering component " + name + " -->")
+			}
+			return template.HTML(html)
+		}
+	}
+
+	return funcs
 }
 
 // extractParams extracts path parameters from the request (Go 1.22+).

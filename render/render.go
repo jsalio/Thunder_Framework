@@ -15,14 +15,15 @@ import (
 
 // Engine is the template rendering engine.
 type Engine struct {
-	directory string
-	extension string
-	cache     map[string]*template.Template
-	mu        sync.RWMutex
-	cssCache  map[string]string
-	cssMu     sync.RWMutex
-	funcMap   template.FuncMap
-	isDebug   bool
+	directory       string
+	extension       string
+	cache           map[string]*template.Template
+	mu              sync.RWMutex
+	cssCache        map[string]string
+	cssMu           sync.RWMutex
+	funcMap         template.FuncMap
+	isDebug         bool
+	knownComponents map[string]bool
 }
 
 // SetDirectory sets the base directory for templates.
@@ -40,6 +41,12 @@ func New(directory string, extension string, isDebug bool) *Engine {
 		funcMap:   defaultFuncMap(),
 		isDebug:   isDebug,
 	}
+}
+
+// SetKnownComponents updates the set of component names available for
+// the <t-NAME /> preprocessor. Called by App when components are registered.
+func (e *Engine) SetKnownComponents(names map[string]bool) {
+	e.knownComponents = names
 }
 
 // AddFunc registers a global function for use in templates.
@@ -96,7 +103,7 @@ func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 
 	// 2. Compile if not in cache
 	if tmpl == nil {
-		pageSrc, err := readAndPreprocessPage(templatePath)
+		pageSrc, err := e.readAndPreprocessPageWithComponents(templatePath)
 		if err != nil {
 			return err
 		}
@@ -218,6 +225,21 @@ func readAndPreprocessPage(path string) (string, error) {
 	return PreprocessPage(string(content)), nil
 }
 
+// readAndPreprocessPageWithComponents reads a page template and applies
+// the component preprocessor first, then the directive preprocessor.
+func (e *Engine) readAndPreprocessPageWithComponents(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading template %q: %w", path, err)
+	}
+	src := string(content)
+	// Phase 1: Resolve <t-NAME /> component tags
+	src = PreprocessComponents(src, e.knownComponents)
+	// Phase 2: Resolve directives (t-if, t-for, etc.)
+	src = PreprocessPage(src)
+	return src, nil
+}
+
 // readAndPreprocessLayout reads a layout template and applies the preprocessor.
 func readAndPreprocessLayout(path string) (string, error) {
 	content, err := os.ReadFile(path)
@@ -309,6 +331,7 @@ func defaultFuncMap() template.FuncMap {
 		"year":      year,
 		"csrfToken": func() string { return "" },
 		"child":     func(name string) template.HTML { return "" },
+		"component": func(name string) template.HTML { return "" },
 	}
 }
 
