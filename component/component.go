@@ -4,6 +4,7 @@ package component
 import (
 	"net/http"
 
+	"github.com/jsalio/thunder_framework/form"
 	"github.com/jsalio/thunder_framework/state"
 )
 
@@ -16,6 +17,36 @@ type Ctx struct {
 	Request      *http.Request
 	Params       map[string]string
 	Writer       http.ResponseWriter
+
+	formData any   // cached decoded form data (lazy, set on first FormData call)
+	formErr  error // cached decode/validation error
+	formDone bool  // whether form decode has been attempted
+}
+
+// FormData decodes the request's form data into T on first call and caches it.
+// Subsequent calls return the cached result without re-parsing.
+//
+//	type Login struct {
+//	    Email string `form:"email" validate:"required"`
+//	}
+//	data, err := component.FormData[Login](ctx)
+func FormData[T any](ctx *Ctx) (T, error) {
+	if ctx.formDone {
+		if ctx.formErr != nil {
+			var zero T
+			return zero, ctx.formErr
+		}
+		return ctx.formData.(T), nil
+	}
+	ctx.formDone = true
+	data, err := form.Decode[T](ctx.Request)
+	if err != nil {
+		ctx.formErr = err
+		var zero T
+		return zero, err
+	}
+	ctx.formData = data
+	return data, nil
 }
 
 // Component unites an HTML template with its data handler.
