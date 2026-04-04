@@ -38,7 +38,7 @@ func Register(app *thunder.App) {
 	app.Component("/", Comp)
 
 	app.Action("/submit", Comp, func(ctx *component.Ctx) {
-		data, err := component.FormDecode[ContactForm](ctx)
+		data, err := component.FormData[ContactForm](ctx)
 		if err != nil {
 			if ve, ok := err.(form.ValidationError); ok {
 				errors := make(map[string]string)
