@@ -1,4 +1,4 @@
-module thunder
+module github.com/jsalio/thunder_framework
 
 go 1.24.0
 
