@@ -1,0 +1,16 @@
+<div style="max-width: 500px; margin: 40px auto; font-family: sans-serif;">
+    <h1>Shared State Example</h1>
+    <p>Both components below read from the same <code>SessionState</code>.
+       The cart writes to it; the summary reads from it.</p>
+
+    <!-- Sibling A: writes to SessionState["cart"] -->
+    <t-cart />
+
+    <!-- Sibling B: reads from SessionState["cart"] -->
+    <t-summary />
+
+    <p style="margin-top: 24px; color: #888; font-size: 0.85em;">
+        Note: clicking "Add" only re-renders the cart (HTMX partial).
+        The summary keeps its old values until a full page reload.
+    </p>
+</div>

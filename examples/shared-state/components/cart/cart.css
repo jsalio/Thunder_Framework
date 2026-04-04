@@ -1,0 +1,24 @@
+#cart {
+    border: 2px solid #4a90d9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #f0f6ff;
+}
+#cart h2 { margin-top: 0; color: #4a90d9; }
+#cart ul { list-style: none; padding: 0; }
+#cart li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+#cart form { display: inline; }
+#cart button {
+    background: #4a90d9;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
