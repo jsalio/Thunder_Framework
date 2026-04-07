@@ -1,0 +1,37 @@
+<t-title>Contact Form</t-title>
+
+<div>
+    <h1>Contact Us</h1>
+
+    <div t-if=".Success" style="color: green; margin-bottom: 1rem;">
+        Message sent successfully!
+    </div>
+
+    <form action="/submit" method="POST" hx-post="/submit" hx-target="closest div" hx-swap="outerHTML">
+        <div>
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{.Form.Name}}" placeholder="Your name">
+            <template t-if='index .Errors "name"'>
+                <span class="error">Name is required</span>
+            </template>
+        </div>
+
+        <div>
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{.Form.Email}}" placeholder="your@email.com">
+            <template t-if='index .Errors "email"'>
+                <span class="error">Email is required</span>
+            </template>
+        </div>
+
+        <div>
+            <label for="message">Message</label>
+            <textarea id="message" name="message" placeholder="Your message" rows="4">{{.Form.Message}}</textarea>
+            <template t-if='index .Errors "message"'>
+                <span class="error">Message is required</span>
+            </template>
+        </div>
+
+        <button type="submit">Send</button>
+    </form>
+</div>
