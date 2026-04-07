@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"os"
 	"strconv"
 
 	thunder "github.com/jsalio/thunder_framework"
@@ -33,27 +32,23 @@ func getOrInitTasks(ctx *component.Ctx) []Task {
 }
 
 // Comp defines the tasks widget (no layout — always renders as fragment).
-var Comp = component.Component{
-	TemplatePath: componentDir() + "/tasks.html",
-	StylePath:    componentDir() + "/tasks.css",
-	Handler: func(ctx *component.Ctx) any {
-		taskList := getOrInitTasks(ctx)
-		pending := 0
-		done := 0
-		for _, t := range taskList {
-			if t.Done {
-				done++
-			} else {
-				pending++
-			}
+var Comp = component.New(func(ctx *component.Ctx) any {
+	taskList := getOrInitTasks(ctx)
+	pending := 0
+	done := 0
+	for _, t := range taskList {
+		if t.Done {
+			done++
+		} else {
+			pending++
 		}
-		return map[string]any{
-			"Tasks":   taskList,
-			"Pending": pending,
-			"Done":    done,
-		}
-	},
-}
+	}
+	return map[string]any{
+		"Tasks":   taskList,
+		"Pending": pending,
+		"Done":    done,
+	}
+})
 
 // Register adds the tasks widget route and its actions.
 func Register(app *thunder.App) {
@@ -98,7 +93,3 @@ func Register(app *thunder.App) {
 	})
 }
 
-func componentDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/granular-updates/components/tasks"
-}

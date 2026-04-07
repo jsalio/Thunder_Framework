@@ -1,0 +1,7 @@
+#summary {
+    border: 2px solid #2ecc71;
+    border-radius: 8px;
+    padding: 16px;
+    background: #eafaf1;
+}
+#summary h2 { margin-top: 0; color: #2ecc71; }

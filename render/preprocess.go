@@ -74,9 +74,10 @@ func injectCSRFFields(src string) string {
 }
 
 // frameworkScripts are the script tags injected before </body> in layouts.
-// Includes HTMX, Idiomorph, and automatic CSRF header injection for HTMX requests.
+// Includes HTMX, Idiomorph, Thunder SSE client, and automatic CSRF header injection.
 const frameworkScripts = `    <script src="/__thunder/htmx.min.js"></script>
     <script src="/__thunder/idiomorph-ext.min.js"></script>
+    <script src="/__thunder/thunder-sse.js"></script>
     <script>
     document.addEventListener("htmx:configRequest", function(e) {
         var c = document.cookie.match(/(?:^|;\s*)thunder_csrf=([^;]*)/);
@@ -356,7 +357,6 @@ func cleanTagSpaces(tag string) string {
 
 	r := out.String()
 	r = strings.ReplaceAll(r, " >", ">")
-	r = strings.ReplaceAll(r, " />", "/>")
 	return r
 }
 
