@@ -1,25 +1,20 @@
 package components
 
 import (
-	"os"
-
 	thunder "github.com/jsalio/thunder_framework"
 	"github.com/jsalio/thunder_framework/component"
 )
 
-var Comp = component.Component{
-	TemplatePath: componentDir() + "/counter.html",
-	LayoutPath:   layoutDir() + "/layout.html",
-	StylePath:    componentDir() + "/counter.css",
-	Handler: func(ctx *component.Ctx) any {
-		count := ctx.SessionState.Get("count")
-		if count == nil {
-			count = 0
-			ctx.SessionState.Set("count", 0)
-		}
-		return map[string]any{"Count": count}
-	},
-}
+// Comp uses component.New() to auto-detect counter.html and counter.css
+// from the same directory as this .go file.
+var Comp = component.New(func(ctx *component.Ctx) any {
+	count := ctx.SessionState.Get("count")
+	if count == nil {
+		count = 0
+		ctx.SessionState.Set("count", 0)
+	}
+	return map[string]any{"Count": count}
+}).WithLayout("../layout/layout.html")
 
 // Register registers the component and its actions.
 func Register(app *thunder.App) {
@@ -37,14 +32,4 @@ func Register(app *thunder.App) {
 	})
 
 	app.Logger.Info("Counter registered")
-}
-
-func componentDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/counter/components"
-}
-
-func layoutDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/counter/components/layout"
 }

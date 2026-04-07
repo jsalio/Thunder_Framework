@@ -1,7 +1,7 @@
 <div>
     <h1>Counter</h1>
+    <t-greeting />
     <p>{{.Count}}</p>
-    <!-- action="/todos" method="POST" hx-post="/todos" -->
     <button action="/increment" method="POST" hx-post="/increment" hx-target="closest div"
         hx-swap="outerHTML">Increment</button>
 </div>

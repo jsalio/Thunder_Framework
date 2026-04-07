@@ -1,0 +1,23 @@
+<div id="cart">
+    <h2>Products</h2>
+    <ul>
+        <li t-for=".Products">
+            {{.Name}} — ${{printf "%.2f" .Price}}
+            <form method="POST" action="/add"
+                  hx-post="/add" hx-target="#cart" hx-swap="outerHTML">
+                <input type="hidden" name="product" value="{{.Name}}">
+                <button type="submit">Add</button>
+            </form>
+        </li>
+    </ul>
+
+    <h3>Cart</h3>
+    <template t-if=".Items">
+        <ul>
+            <li t-for=".Items">{{.Name}} — ${{printf "%.2f" .Price}}</li>
+        </ul>
+    </template>
+    <template t-else>
+        <p><em>Empty cart</em></p>
+    </template>
+</div>
