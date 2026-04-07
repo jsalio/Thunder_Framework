@@ -42,6 +42,49 @@ type App struct {
 	components map[string]component.Component
 }
 
+// AppGroup represents a group of routes within a Thunder application.
+// It allows registering components and actions under a common prefix and middleware stack.
+type AppGroup struct {
+	app   *App
+	group *router.Group
+}
+
+func (g *AppGroup) GET(pattern string, handler http.HandlerFunc) {
+	g.group.GET(pattern, handler)
+}
+
+func (g *AppGroup) POST(pattern string, handler http.HandlerFunc) {
+	g.group.POST(pattern, handler)
+}
+
+func (g *AppGroup) PUT(pattern string, handler http.HandlerFunc) {
+	g.group.PUT(pattern, handler)
+}
+
+func (g *AppGroup) DELETE(pattern string, handler http.HandlerFunc) {
+	g.group.DELETE(pattern, handler)
+}
+
+func (g *AppGroup) PATCH(pattern string, handler http.HandlerFunc) {
+	g.group.PATCH(pattern, handler)
+}
+
+// Group creates a new sub-group from the current group.
+func (g *AppGroup) Group(prefix string, middlewares ...router.Middleware) *AppGroup {
+	return &AppGroup{
+		app:   g.app,
+		group: g.group.Group(prefix, middlewares...),
+	}
+}
+
+// Group creates a new top-level route group.
+func (a *App) Group(prefix string, middlewares ...router.Middleware) *AppGroup {
+	return &AppGroup{
+		app:   a,
+		group: a.Router.Group(prefix, middlewares...),
+	}
+}
+
 func NewApp() *App {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -119,12 +162,29 @@ func (a *App) Render(w http.ResponseWriter, templateName string, data any) {
 	}
 }
 
+// Component registers a component on a route within the group.
+func (g *AppGroup) Component(pattern string, comp component.Component) {
+	g.group.Handle("GET "+pattern, g.app.componentHandler(comp))
+}
+
+// Action registers a POST action within the group.
+func (g *AppGroup) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
+	g.group.POST(pattern, g.app.actionHandler(comp, handler))
+}
+
 // Component registers a component on a route.
-// The component defines its own template path and handler,
-// keeping logic and view co-located.
-// Example: app.Component("GET /users/:id", my_component.Comp)
 func (a *App) Component(pattern string, comp component.Component) {
-	a.Router.Handle("GET "+pattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	a.Router.Handle("GET "+pattern, a.componentHandler(comp))
+}
+
+// Action registers a POST action associated with a component.
+func (a *App) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
+	a.Router.POST(pattern, a.actionHandler(comp, handler))
+}
+
+// componentHandler creates the http.HandlerFunc for a component.
+func (a *App) componentHandler(comp component.Component) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		sessionState, sessionID := a.getSessionStateAndID(w, r)
 		ctx := &component.Ctx{
 			State:        a.State,
@@ -164,15 +224,12 @@ func (a *App) Component(pattern string, comp component.Component) {
 			)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
-	}))
+	}
 }
 
-// Action registers a POST action associated with a component.
-// The handler executes the mutation; the framework responds automatically:
-//   - HTMX: re-renders the component as a partial
-//   - Normal: redirects to referer (or "/" by default)
-func (a *App) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
-	a.Router.POST(pattern, func(w http.ResponseWriter, r *http.Request) {
+// actionHandler creates the http.HandlerFunc for an action.
+func (a *App) actionHandler(comp component.Component, handler func(ctx *component.Ctx)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		sessionState, sessionID := a.getSessionStateAndID(w, r)
 		ctx := &component.Ctx{
 			State:        a.State,
@@ -193,7 +250,7 @@ func (a *App) Action(pattern string, comp component.Component, handler func(ctx 
 			}
 			http.Redirect(w, r, ref, http.StatusSeeOther)
 		}
-	})
+	}
 }
 
 // RenderComponent renders a component directly from a handler.
