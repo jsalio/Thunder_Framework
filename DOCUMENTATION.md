@@ -9,6 +9,7 @@ Thunder is a lightweight Go web framework inspired by Angular's architecture, fe
 - [Template Directives](#template-directives)
 - [Actions (app.Action)](#actions)
 - [Routing & Middleware](#routing--middleware)
+- [Route Groups](#route-groups)
 - [Server Lifecycle](#server-lifecycle)
 
 ---
@@ -445,6 +446,59 @@ r.GET("/", func(w http.ResponseWriter, req *http.Request) {
     w.Write([]byte("Hello Thunder!"))
 })
 ```
+
+---
+
+## Route Groups
+
+Route groups allow you to group related routes under a common path prefix and apply specific middleware to that entire group. This is essential for building modular applications (e.g., separating `/api` from `/admin`).
+
+### Creating a Group
+
+Use `app.Group(prefix, middlewares...)` to create a new group.
+
+```go
+app := thunder.NewApp()
+
+// Public group (no middleware)
+public := app.Group("/")
+public.Component("/home", HomeComp)
+
+// Protected API group
+api := app.Group("/api", AuthMiddleware)
+api.GET("/data", dataHandler)
+```
+
+### Nesting Groups
+
+Groups can be nested to create hierarchical path structures. Prefixes and middlewares are accumulated.
+
+```go
+api := app.Group("/api", LoggerMiddleware)
+{
+    v1 := api.Group("/v1")
+    v1.GET("/users", listUsers) // Final path: /api/v1/users
+}
+```
+
+### Using Components and Actions
+
+Groups in Thunder are "app-aware", meaning they support the core framework features:
+
+```go
+dash := app.Group("/dashboard", CacheMiddleware)
+
+// The component inherits the group's prefix and middleware
+dash.Component("/home", DashboardComp) 
+
+// The action also respects the group's settings
+dash.Action("/refresh", DashboardComp, refreshHandler)
+```
+
+### Benefits
+- **Scoped Middleware:** Apply auth or logging only where needed.
+- **DRY Prefixes:** Avoid repeating `/api/v1` in every route definition.
+- **Clean Architecture:** Delegate route registration to different modules or packages.
 
 ---
 

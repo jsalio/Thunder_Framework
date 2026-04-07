@@ -15,6 +15,7 @@ go run ./examples/Dashboard
 # Run Counter example
 go run ./examples/counter        # Session state example (serves on :8090)
 go run ./examples/todo-sample    # Full-featured example (serves on :8086)
+go run ./examples/group-test     # Route Groups and multi-layout example (serves on :8088)
 
 # Build all packages
 go build ./...
@@ -42,6 +43,11 @@ app.Action("/do-thing", myComp, actionFn)     // Register POST action tied to co
 app.GET("/api/data", handler)                 // Standard GET route
 app.POST("/api/data", handler)                // Standard POST route
 app.Static("/static/", "./static")            // Serve static files
+ 
+// Route Groups
+api := app.Group("/api", authMiddleware)
+api.Component("/users", userComp)             // Final path: /api/users
+api.GET("/stats", statsHandler)               // Final path: /api/stats
 
 app.Run(thunder.AppArgs{Port: 8086, AppName: "MyApp"})
 ```
@@ -50,7 +56,7 @@ Exported fields on `App`: `Renderer`, `Router`, `Logger`, `State`, `Sessions`.
 
 ### Subsystems
 
-- **Router** (`router/`) — wraps `http.ServeMux` (Go 1.22+ path patterns with `PathValue()`). Supports `GET`, `POST`, `PUT`, `DELETE`, `PATCH`. Global middleware via `app.Router.Use(middleware)`, applied in registration order.
+- **Router** (`router/`) — wraps `http.ServeMux` (Go 1.22+ path patterns with `PathValue()`). Supports `GET`, `POST`, `PUT`, `DELETE`, `PATCH`. Global middleware via `app.Router.Use(middleware)`. Supports **Route Groups** via `app.Group(prefix, middlewares...)` which allow recursive nesting and prefix concatenation.
 - **Renderer** (`render/`) — Go `html/template` engine with thread-safe caching (disabled in debug mode). Includes a **template preprocessor** that transforms Thunder directives into Go template syntax before parsing. Handles CSS injection and layout composition.
 - **State** (`state/`) — thread-safe `sync.RWMutex`-based key-value store. Two scopes: **global** (`app.State`, shared across all users) and **session** (per-user, managed via `SessionStore` with cookie-based session IDs).
 - **Server** (`server/`) — HTTP server with graceful shutdown (SIGTERM/SIGINT), 15s read/write timeouts, 60s idle timeout.
@@ -110,8 +116,16 @@ func Register(app *thunder.App) {
 }
 ```
 
-- `app.Component(pattern, comp)` — registers a GET route. Detects HTMX requests (`HX-Request` header) and renders without layout (partial) for those.
 - `app.Action(pattern, comp, handler)` — registers a POST route. Runs the handler, then: HTMX request → re-renders component as partial; normal request → redirects to `Referer` via HTTP 303.
+
+### Route Groups (`AppGroup`)
+
+`app.Group(prefix, middlewares...)` returns an `*AppGroup` which exposes the same interface as `App` for registration:
+
+- `g.Component(pattern, comp)` — Registers a component with the group's prefix and middlewares.
+- `g.Action(pattern, comp, handler)` — Registers an action with the group's prefix and middlewares.
+- `g.GET/POST/PUT/DELETE/PATCH(pattern, handler)` — Registers standard HTTP handlers.
+- `g.Group(prefix, middlewares...)` — Creates a nested sub-group.
 
 ### Additional Render Methods
 

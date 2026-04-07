@@ -11,6 +11,7 @@
 - 📦 **Co-located Components**: Keep your Go logic, HTML templates, and CSS styles in a single directory.
 - 🎨 **HTML-Native Directives**: Use `t-if`, `t-for`, and `t-class` directly in your HTML — no more verbose Go template syntax.
 - 🦅 **HTMX Integration Out-of-the-Box**: Built-in support for partial rendering and seamless state updates.
+- 🛣️ **Scoped Middleware & Route Groups**: Group routes under prefixes (e.g., `/api/v1`) and apply middleware to entire sections of your app.
 - 🚀 **Gracefully Lightweight**: Fast startup, graceful shutdown, and minimal dependencies.
 
 ---
