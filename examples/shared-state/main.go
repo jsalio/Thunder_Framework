@@ -49,8 +49,11 @@ func main() {
 		}
 		items = append(items, product)
 
-		// Write back — summary can read this on next full render
+		// Write back to session state
 		ctx.SessionState.Set("cart", items)
+
+		// Emit SSE event so sibling components (summary) auto-refresh
+		ctx.Emit("cart-updated")
 	})
 
 	log.Println("Starting Shared State Example...")

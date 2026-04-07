@@ -7,10 +7,10 @@
     <t-cart />
 
     <!-- Sibling B: reads from SessionState["cart"] -->
-    <t-summary />
+    <t-summary t-sse="cart-updated" />
 
     <p style="margin-top: 24px; color: #888; font-size: 0.85em;">
-        Note: clicking "Add" only re-renders the cart (HTMX partial).
-        The summary keeps its old values until a full page reload.
+        Note: clicking "Add" re-renders the cart (HTMX).
+        The summary sibling <strong>auto-refreshes</strong> via SSE (t-sse="cart-updated").
     </p>
 </div>

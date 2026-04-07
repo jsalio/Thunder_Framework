@@ -20,6 +20,7 @@ import (
 	"github.com/jsalio/thunder_framework/render"
 	"github.com/jsalio/thunder_framework/router"
 	"github.com/jsalio/thunder_framework/server"
+	"github.com/jsalio/thunder_framework/sse"
 	"github.com/jsalio/thunder_framework/state"
 )
 
@@ -37,6 +38,7 @@ type App struct {
 	Logger     *slog.Logger
 	State      *state.State
 	Sessions   *state.SessionStore
+	SSEHub     *sse.Hub
 	components map[string]component.Component
 }
 
@@ -51,6 +53,7 @@ func NewApp() *App {
 		Logger:     logger,
 		State:      state.New(),
 		Sessions:   state.NewSessionStore(),
+		SSEHub:     sse.NewHub(),
 		components: make(map[string]component.Component),
 	}
 }
@@ -122,12 +125,15 @@ func (a *App) Render(w http.ResponseWriter, templateName string, data any) {
 // Example: app.Component("GET /users/:id", my_component.Comp)
 func (a *App) Component(pattern string, comp component.Component) {
 	a.Router.Handle("GET "+pattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sessionState, sessionID := a.getSessionStateAndID(w, r)
 		ctx := &component.Ctx{
 			State:        a.State,
-			SessionState: a.getSessionState(w, r),
+			SessionState: sessionState,
 			Request:      r,
 			Params:       extractParams(r),
 			Writer:       w,
+			SessionID:    sessionID,
+			Broadcaster:  a.SSEHub,
 		}
 
 		var data any
@@ -167,12 +173,15 @@ func (a *App) Component(pattern string, comp component.Component) {
 //   - Normal: redirects to referer (or "/" by default)
 func (a *App) Action(pattern string, comp component.Component, handler func(ctx *component.Ctx)) {
 	a.Router.POST(pattern, func(w http.ResponseWriter, r *http.Request) {
+		sessionState, sessionID := a.getSessionStateAndID(w, r)
 		ctx := &component.Ctx{
 			State:        a.State,
-			SessionState: a.getSessionState(w, r),
+			SessionState: sessionState,
 			Request:      r,
 			Params:       extractParams(r),
 			Writer:       w,
+			SessionID:    sessionID,
+			Broadcaster:  a.SSEHub,
 		}
 		handler(ctx)
 		if isHTMXRequest(r) {
@@ -190,12 +199,15 @@ func (a *App) Action(pattern string, comp component.Component, handler func(ctx 
 // RenderComponent renders a component directly from a handler.
 // Useful when you need extra control over the request before rendering.
 func (a *App) RenderComponent(w http.ResponseWriter, r *http.Request, comp component.Component) {
+	sessionState, sessionID := a.getSessionStateAndID(w, r)
 	ctx := &component.Ctx{
 		State:        a.State,
-		SessionState: a.getSessionState(w, r),
+		SessionState: sessionState,
 		Request:      r,
 		Params:       extractParams(r),
 		Writer:       w,
+		SessionID:    sessionID,
+		Broadcaster:  a.SSEHub,
 	}
 
 	var data any
@@ -221,12 +233,15 @@ func isHTMXRequest(r *http.Request) bool {
 // RenderComponentPartial renders a component without layout (HTML fragment).
 // Useful for HTMX responses from POST handlers.
 func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, comp component.Component) {
+	sessionState, sessionID := a.getSessionStateAndID(w, r)
 	ctx := &component.Ctx{
 		State:        a.State,
-		SessionState: a.getSessionState(w, r),
+		SessionState: sessionState,
 		Request:      r,
 		Params:       extractParams(r),
 		Writer:       w,
+		SessionID:    sessionID,
+		Broadcaster:  a.SSEHub,
 	}
 
 	var data any
@@ -234,7 +249,15 @@ func (a *App) RenderComponentPartial(w http.ResponseWriter, r *http.Request, com
 		data = comp.Handler(ctx)
 	}
 
-	err := a.Renderer.RenderPartialWithCSRF(w, comp.TemplatePath, comp.StylePath, data, csrf.Token(r))
+	token := csrf.Token(r)
+	childFuncs := a.buildTemplateFuncs(ctx, comp.Children, token)
+
+	var err error
+	if childFuncs != nil {
+		err = a.Renderer.RenderWithFuncs(w, comp.TemplatePath, "", comp.StylePath, data, token, childFuncs)
+	} else {
+		err = a.Renderer.RenderPartialWithCSRF(w, comp.TemplatePath, comp.StylePath, data, token)
+	}
 	if err != nil {
 		a.Logger.Error("error rendering partial component",
 			"template", comp.TemplatePath,
@@ -318,7 +341,9 @@ func extractParams(r *http.Request) map[string]string {
 	return params
 }
 
-func (a *App) getSessionState(w http.ResponseWriter, r *http.Request) *state.State {
+// getSessionStateAndID retrieves the session state and session ID
+// from the request cookie. Creates a new session if none exists.
+func (a *App) getSessionStateAndID(w http.ResponseWriter, r *http.Request) (*state.State, string) {
 	cookie, err := r.Cookie("thunder_session")
 	var sessionID string
 	if err != nil {
@@ -335,7 +360,7 @@ func (a *App) getSessionState(w http.ResponseWriter, r *http.Request) *state.Sta
 	} else {
 		sessionID = cookie.Value
 	}
-	return a.Sessions.Get(sessionID)
+	return a.Sessions.Get(sessionID), sessionID
 }
 
 func generateSessionID() string {
@@ -356,17 +381,19 @@ func Ternary[T any](condition bool, trueVal, falseVal T) T {
 // Run starts the HTTP server on the indicated port.
 func (a *App) Run(args AppArgs) error {
 	a.registerAssetRoutes()
+	a.registerSSERoutes()
 
 	a.Router.Prepend(recovery.Recover())
 
 	if !args.DisableCSRF {
 		cfg := csrf.Config{}
-		if len(args.CSRFExempt) > 0 {
-			cfg.Exempt = make(map[string]bool, len(args.CSRFExempt))
-			for _, p := range args.CSRFExempt {
-				cfg.Exempt[p] = true
-			}
+		// Always exempt the SSE events endpoint from CSRF.
+		exempt := make(map[string]bool)
+		exempt["/__thunder/events"] = true
+		for _, p := range args.CSRFExempt {
+			exempt[p] = true
 		}
+		cfg.Exempt = exempt
 		a.Router.Use(csrf.Protect(cfg))
 	}
 
@@ -393,6 +420,29 @@ func (a *App) Run(args AppArgs) error {
 	printBanner(defaultAppName, defaultPort)
 
 	return server.Start(":"+strconv.Itoa(defaultPort), a.Router.Handler())
+}
+
+// registerSSERoutes sets up the SSE events endpoint and
+// component partial render endpoints for SSE-driven swaps.
+func (a *App) registerSSERoutes() {
+	// SSE stream endpoint — clients connect here to listen for events.
+	a.Router.Handle("GET /__thunder/events", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("thunder_session")
+		if err != nil {
+			http.Error(w, "no session", http.StatusUnauthorized)
+			return
+		}
+		a.SSEHub.ServeHTTP(w, r, cookie.Value)
+	}))
+
+	// Component partial render endpoints — one per registered component.
+	// The client JS fetches these to get fresh HTML when an SSE event fires.
+	for name, comp := range a.components {
+		comp := comp // capture
+		a.Router.Handle("GET /__thunder/component/"+name, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			a.RenderComponentPartial(w, r, comp)
+		}))
+	}
 }
 
 var (

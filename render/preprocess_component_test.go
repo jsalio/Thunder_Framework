@@ -66,6 +66,26 @@ func TestPreprocessComponents(t *testing.T) {
 			in:   `<t-counter/>`,
 			want: `{{component "counter"}}`,
 		},
+		{
+			name: "component with t-sse",
+			in:   `<t-counter t-sse="count-changed" />`,
+			want: `<div data-t-sse="count-changed" data-t-sse-url="/__thunder/component/counter">{{component "counter"}}</div>`,
+		},
+		{
+			name: "component with t-sse and other content",
+			in:   `<div><t-counter t-sse="upd" /></div>`,
+			want: `<div><div data-t-sse="upd" data-t-sse-url="/__thunder/component/counter">{{component "counter"}}</div></div>`,
+		},
+		{
+			name: "regular tag with t-sse",
+			in:   `<div t-sse="refresh-me">content</div>`,
+			want: `<div data-t-sse="refresh-me">content</div>`,
+		},
+		{
+			name: "regular tag with t-sse and trailing slash",
+			in:   `<img src="foo.png" t-sse="reload" />`,
+			want: `<img src="foo.png" data-t-sse="reload"/>`,
+		},
 	}
 
 	for _, tt := range tests {
