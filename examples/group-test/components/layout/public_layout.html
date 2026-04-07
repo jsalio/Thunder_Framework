@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Thunder Public</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+        nav { background: #007bff; padding: 1rem; color: white; display: flex; gap: 20px; }
+        nav a { color: white; text-decoration: none; font-weight: bold; }
+        nav a:hover { text-underline-offset: 4px; text-decoration: underline; }
+        .container { padding: 40px; max-width: 800px; margin: auto; background: white; margin-top: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .footer { text-align: center; margin-top: 40px; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/about">Sobre Nosotros</a>
+        <a href="/admin/dashboard" style="margin-left: auto; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 4px;">Ir al Panel Admin ⚡</a>
+    </nav>
+    <div class="container">
+        {{template "content" .}}
+    </div>
+    <div class="footer">
+        Powered by Thunder Framework ⚡
+    </div>
+</body>
+</html>
