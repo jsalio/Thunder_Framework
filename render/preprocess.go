@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -48,6 +49,19 @@ func PreprocessLayout(src string) string {
 const frameworkScripts = `    <script src="/__thunder/htmx.min.js"></script>
     <script src="/__thunder/idiomorph-ext.min.js"></script>
 `
+
+// injectLiveReloadScript inserts the WebSocket live-reload client before </body>.
+// Called only when the server is running under `thunder watch` (THUNDER_WATCHER=1).
+func injectLiveReloadScript(src string, wsPort int) string {
+	lower := strings.ToLower(src)
+	idx := strings.LastIndex(lower, "</body>")
+	if idx == -1 {
+		return src
+	}
+	script := fmt.Sprintf(`    <script>(function(){var ws=new WebSocket("ws://localhost:%d");ws.onmessage=function(){location.reload()};ws.onclose=function(){setTimeout(function(){location.reload()},2000)}})();</script>
+`, wsPort)
+	return src[:idx] + script + src[idx:]
+}
 
 // injectFrameworkScripts inserts HTMX and Idiomorph <script> tags
 // before </body> in layout templates. Skips injection if the scripts

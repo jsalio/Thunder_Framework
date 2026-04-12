@@ -14,14 +14,21 @@ import (
 
 // Engine is the template rendering engine.
 type Engine struct {
-	directory string
-	extension string
-	cache     map[string]*template.Template
-	mu        sync.RWMutex
-	cssCache  map[string]string
-	cssMu     sync.RWMutex
-	funcMap   template.FuncMap
-	isDebug   bool
+	directory      string
+	extension      string
+	cache          map[string]*template.Template
+	mu             sync.RWMutex
+	cssCache       map[string]string
+	cssMu          sync.RWMutex
+	funcMap        template.FuncMap
+	isDebug        bool
+	liveReloadPort int // 0 = disabled; set by SetLiveReload when running under thunder watch
+}
+
+// SetLiveReload enables live-reload script injection into layouts.
+// Called by App.Run when THUNDER_WATCHER=1 is detected in the environment.
+func (e *Engine) SetLiveReload(wsPort int) {
+	e.liveReloadPort = wsPort
 }
 
 // SetDirectory sets the base directory for templates.
@@ -86,7 +93,7 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 		}
 
 		if layoutPath != "" {
-			layoutSrc, err := readAndPreprocessLayout(layoutPath)
+			layoutSrc, err := e.readAndPreprocessLayout(layoutPath)
 			if err != nil {
 				return err
 			}
@@ -168,13 +175,18 @@ func readAndPreprocessPage(path string) (string, error) {
 	return PreprocessPage(string(content)), nil
 }
 
-// readAndPreprocessLayout reads a layout template and applies the preprocessor.
-func readAndPreprocessLayout(path string) (string, error) {
+// readAndPreprocessLayout reads a layout template, applies the preprocessor,
+// and injects the live-reload script when running under thunder watch.
+func (e *Engine) readAndPreprocessLayout(path string) (string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading template %q: %w", path, err)
 	}
-	return PreprocessLayout(string(content)), nil
+	src := PreprocessLayout(string(content))
+	if e.liveReloadPort > 0 {
+		src = injectLiveReloadScript(src, e.liveReloadPort)
+	}
+	return src, nil
 }
 
 // loadCSS reads and caches a CSS file's content.

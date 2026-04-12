@@ -254,6 +254,12 @@ func Ternary[T any](condition bool, trueVal, falseVal T) T {
 
 // Run starts the HTTP server on the indicated port.
 func (a *App) Run(args AppArgs) error {
+	if os.Getenv("THUNDER_WATCHER") == "1" {
+		if wsPort, err := strconv.Atoi(os.Getenv("THUNDER_WS_PORT")); err == nil && wsPort > 0 {
+			a.Renderer.SetLiveReload(wsPort)
+		}
+	}
+
 	a.registerAssetRoutes()
 
 	a.Router.Prepend(recovery.Recover())
