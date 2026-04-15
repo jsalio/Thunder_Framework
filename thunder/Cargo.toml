@@ -1,0 +1,20 @@
+[package]
+name    = "thunder"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "thunder"
+path = "src/main.rs"
+
+[dependencies]
+tokio              = { version = "1", features = ["full"] }
+notify             = "6"
+tokio-tungstenite  = "0.24"
+futures-util       = "0.3"
+clap               = { version = "4", features = ["derive"] }
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
