@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
-	"thunder"
-	"thunder/examples/granular-updates/components/activity"
-	"thunder/examples/granular-updates/components/page"
-	"thunder/examples/granular-updates/components/stats"
-	"thunder/examples/granular-updates/components/tasks"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/examples/granular-updates/components/activity"
+	"github.com/jsalio/thunder_framework/examples/granular-updates/components/page"
+	"github.com/jsalio/thunder_framework/examples/granular-updates/components/stats"
+	"github.com/jsalio/thunder_framework/examples/granular-updates/components/tasks"
 )
 
 func main() {

@@ -1,6 +1,16 @@
 {
   "version": 1,
   "skills": {
+    "cybersecurity": {
+      "source": "omer-metin/skills-for-antigravity",
+      "sourceType": "github",
+      "computedHash": "01f521e59bd39a66c82e30e658490759337804d72359f31373732a2682cac00a"
+    },
+    "cybersecurity-analyst": {
+      "source": "rysweet/amplihack",
+      "sourceType": "github",
+      "computedHash": "4f804565a002629ad80e311b460d710783af11bfddda5ddecee18c4b8f54cc0e"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",

@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
-	"thunder"
-	"thunder/examples/Dashboard/components/customers"
-	"thunder/examples/Dashboard/components/overview"
-	"thunder/examples/Dashboard/components/sales"
-	"thunder/examples/Dashboard/store"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/examples/Dashboard/components/customers"
+	"github.com/jsalio/thunder_framework/examples/Dashboard/components/overview"
+	"github.com/jsalio/thunder_framework/examples/Dashboard/components/sales"
+	"github.com/jsalio/thunder_framework/examples/Dashboard/store"
 )
 
 func main() {

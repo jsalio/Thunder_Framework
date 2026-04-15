@@ -5,7 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
-	"thunder/router"
+
+	"github.com/jsalio/thunder_framework/router"
 )
 
 // Recover returns a middleware that recovers from panics in downstream handlers.

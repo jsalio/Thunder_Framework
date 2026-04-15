@@ -1,8 +1,8 @@
 package main
 
 import (
-	"thunder"
-	"thunder/examples/hello-world/components/hello"
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/examples/hello-world/components/hello"
 )
 
 func main() {

@@ -2,9 +2,9 @@ package stats
 
 import (
 	"math/rand"
-	"os"
-	"thunder"
-	"thunder/component"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
 )
 
 // StatsData holds the project statistics stored in session state.
@@ -27,10 +27,7 @@ func generateStats() StatsData {
 }
 
 // Comp defines the stats widget (no layout — always renders as fragment).
-var Comp = component.Component{
-	TemplatePath: componentDir() + "/stats.html",
-	StylePath:    componentDir() + "/stats.css",
-	Handler: func(ctx *component.Ctx) any {
+var Comp = component.New(func(ctx *component.Ctx) any {
 		if ctx.SessionState.Get("stats_data") == nil {
 			ctx.SessionState.Set("stats_data", generateStats())
 			ctx.SessionState.Set("stats_refreshes", 0)
@@ -39,8 +36,7 @@ var Comp = component.Component{
 			"Stats":     ctx.SessionState.Get("stats_data").(StatsData),
 			"Refreshes": ctx.SessionState.Get("stats_refreshes").(int),
 		}
-	},
-}
+})
 
 // Register adds the stats widget route and its refresh action.
 func Register(app *thunder.App) {
@@ -53,9 +49,4 @@ func Register(app *thunder.App) {
 		}
 		ctx.SessionState.Set("stats_refreshes", refreshes+1)
 	})
-}
-
-func componentDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/granular-updates/components/stats"
 }

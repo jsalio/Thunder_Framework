@@ -60,7 +60,7 @@ func TestPreprocessIf(t *testing.T) {
 		{
 			name: "if with single quotes",
 			in:   `<form t-if='gt (index .Stats "Done") 0'>btn</form>`,
-			want: `{{if gt (index .Stats "Done") 0}}<form>btn</form>{{end}}`,
+			want: `{{if gt (index .Stats "Done") 0}}<form>btn` + csrfHiddenField + `</form>{{end}}`,
 		},
 	}
 	for _, tt := range tests {
@@ -151,7 +151,7 @@ func TestPreprocessMorph(t *testing.T) {
 		{
 			name: "t-morph with existing hx-swap prefixes value",
 			in:   `<form t-morph hx-post="/add" hx-swap="innerHTML">ok</form>`,
-			want: `<form hx-post="/add" hx-swap="morph:innerHTML" hx-ext="morph">ok</form>`,
+			want: `<form hx-post="/add" hx-swap="morph:innerHTML" hx-ext="morph">ok` + csrfHiddenField + `</form>`,
 		},
 		{
 			name: "t-morph with existing hx-ext merges",
@@ -280,6 +280,43 @@ func TestInjectFrameworkScripts(t *testing.T) {
 			got := injectFrameworkScripts(tt.in)
 			if got != tt.want {
 				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInjectCSRFFields(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "single form",
+			in:   `<form action="/post"><input name="x"></form>`,
+			want: `<form action="/post"><input name="x">` + csrfHiddenField + `</form>`,
+		},
+		{
+			name: "multiple forms",
+			in:   `<form>a</form><form>b</form>`,
+			want: `<form>a` + csrfHiddenField + `</form><form>b` + csrfHiddenField + `</form>`,
+		},
+		{
+			name: "no form passes through",
+			in:   `<div>hello</div>`,
+			want: `<div>hello</div>`,
+		},
+		{
+			name: "case insensitive",
+			in:   `<form>x</FORM>`,
+			want: `<form>x` + csrfHiddenField + `</FORM>`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := injectCSRFFields(tt.in)
+			if got != tt.want {
+				t.Errorf("\ngot:  %s\nwant: %s", got, tt.want)
 			}
 		})
 	}

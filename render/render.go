@@ -3,6 +3,7 @@
 package render
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -29,6 +30,15 @@ type Engine struct {
 // Called by App.Run when THUNDER_WATCHER=1 is detected in the environment.
 func (e *Engine) SetLiveReload(wsPort int) {
 	e.liveReloadPort = wsPort
+	directory       string
+	extension       string
+	cache           map[string]*template.Template
+	mu              sync.RWMutex
+	cssCache        map[string]string
+	cssMu           sync.RWMutex
+	funcMap         template.FuncMap
+	isDebug         bool
+	knownComponents map[string]bool
 }
 
 // SetDirectory sets the base directory for templates.
@@ -46,6 +56,12 @@ func New(directory string, extension string, isDebug bool) *Engine {
 		funcMap:   defaultFuncMap(),
 		isDebug:   isDebug,
 	}
+}
+
+// SetKnownComponents updates the set of component names available for
+// the <t-NAME /> preprocessor. Called by App when components are registered.
+func (e *Engine) SetKnownComponents(names map[string]bool) {
+	e.knownComponents = names
 }
 
 // AddFunc registers a global function for use in templates.
@@ -71,7 +87,22 @@ func (e *Engine) Render(buffer io.Writer, name string, data any) error {
 // optionally wrapped in a layout. If stylePath is set, the CSS is
 // injected as an inline <style> tag (in <head> for layouts, before
 // content for partials).
+// RenderFileWithCSRF is like RenderFile but binds a CSRF token for template use.
+func (e *Engine) RenderFileWithCSRF(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string) error {
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, csrfToken, nil)
+}
+
 func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any) error {
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, "", nil)
+}
+
+// RenderWithFuncs renders a component with additional per-request template functions.
+// Used by the child composition system to inject {{child "name"}} into templates.
+func (e *Engine) RenderWithFuncs(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string, extraFuncs template.FuncMap) error {
+	return e.renderFile(buffer, templatePath, layoutPath, stylePath, data, csrfToken, extraFuncs)
+}
+
+func (e *Engine) renderFile(buffer io.Writer, templatePath, layoutPath, stylePath string, data any, csrfToken string, extraFuncs template.FuncMap) error {
 	cacheKey := templatePath + "|" + layoutPath + "|" + stylePath
 
 	// 1. Search in cache
@@ -87,7 +118,7 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 
 	// 2. Compile if not in cache
 	if tmpl == nil {
-		pageSrc, err := readAndPreprocessPage(templatePath)
+		pageSrc, err := e.readAndPreprocessPageWithComponents(templatePath)
 		if err != nil {
 			return err
 		}
@@ -141,6 +172,24 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 	}
 
 	// 3. Execute — same path for cache hit and miss.
+	// Clone the template for per-request functions (CSRF token, child components).
+	execTmpl := tmpl
+	if csrfToken != "" || len(extraFuncs) > 0 {
+		cloned, err := tmpl.Clone()
+		if err != nil {
+			return fmt.Errorf("cloning template: %w", err)
+		}
+		funcs := template.FuncMap{}
+		if csrfToken != "" {
+			funcs["csrfToken"] = func() string { return csrfToken }
+		}
+		for k, v := range extraFuncs {
+			funcs[k] = v
+		}
+		cloned.Funcs(funcs)
+		execTmpl = cloned
+	}
+
 	if layoutPath == "" {
 		// Partial render: inject CSS inline before content.
 		if stylePath != "" {
@@ -154,16 +203,32 @@ func (e *Engine) RenderFile(buffer io.Writer, templatePath, layoutPath, stylePat
 				io.WriteString(buffer, "</style>\n")
 			}
 		}
-		return tmpl.ExecuteTemplate(buffer, "content", data)
+		return execTmpl.ExecuteTemplate(buffer, "content", data)
 	}
 	// Full render: CSS is already in the compiled template via "component-styles" block.
-	return tmpl.Execute(buffer, data)
+	return execTmpl.Execute(buffer, data)
+}
+
+// RenderPartialToString renders a component as a partial (no layout) and returns the HTML string.
+// Used internally for child component composition — the parent template calls {{child "name"}}
+// which triggers this to render the child inline.
+func (e *Engine) RenderPartialToString(templatePath, stylePath string, data any, csrfToken string) (string, error) {
+	var buf bytes.Buffer
+	if err := e.renderFile(&buf, templatePath, "", stylePath, data, csrfToken, nil); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 // RenderPartial renders only a component fragment without a layout.
 // Useful for partial responses (HTMX, fetch, etc.).
 func (e *Engine) RenderPartial(buffer io.Writer, templatePath, stylePath string, data any) error {
-	return e.RenderFile(buffer, templatePath, "", stylePath, data)
+	return e.renderFile(buffer, templatePath, "", stylePath, data, "", nil)
+}
+
+// RenderPartialWithCSRF is like RenderPartial but binds a CSRF token.
+func (e *Engine) RenderPartialWithCSRF(buffer io.Writer, templatePath, stylePath string, data any, csrfToken string) error {
+	return e.renderFile(buffer, templatePath, "", stylePath, data, csrfToken, nil)
 }
 
 // readAndPreprocessPage reads a page/component template and applies the preprocessor.
@@ -263,12 +328,15 @@ func (e *Engine) getTemplate(name string) (*template.Template, error) {
 
 func defaultFuncMap() template.FuncMap {
 	return template.FuncMap{
-		"safeHTML": safeHTML,
-		"safeJS":   secureJS,
-		"safeCSS":  secureCSS,
-		"safeURL":  secureURL,
-		"safeAttr": secureAttr,
-		"year":     year,
+		"safeHTML":  safeHTML,
+		"safeJS":    secureJS,
+		"safeCSS":   secureCSS,
+		"safeURL":   secureURL,
+		"safeAttr":  secureAttr,
+		"year":      year,
+		"csrfToken": func() string { return "" },
+		"child":     func(name string) template.HTML { return "" },
+		"component": func(name string) template.HTML { return "" },
 	}
 }
 

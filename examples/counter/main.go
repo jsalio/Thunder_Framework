@@ -1,8 +1,9 @@
 package main
 
 import (
-	"thunder"
-	"thunder/examples/counter/components"
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/examples/counter/components"
+	"github.com/jsalio/thunder_framework/examples/counter/components/greeting"
 )
 
 func main() {
@@ -11,7 +12,10 @@ func main() {
 	// Initial state
 	app.State.Set("count", 0)
 
-	// Register counter
+	// Register global components — usable as <t-greeting /> in any template
+	app.RegisterComponent("greeting", greeting.Comp)
+
+	// Register counter page and actions
 	components.Register(app)
 
 	app.Run(thunder.AppArgs{

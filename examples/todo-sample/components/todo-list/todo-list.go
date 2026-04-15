@@ -1,27 +1,22 @@
 package todolist
 
 import (
-	"os"
 	"strconv"
-	"thunder"
-	"thunder/component"
-	todostore "thunder/examples/todo-sample/store"
+
+	thunder "github.com/jsalio/thunder_framework"
+	"github.com/jsalio/thunder_framework/component"
+	todostore "github.com/jsalio/thunder_framework/examples/todo-sample/store"
 )
 
 // Comp defines the TodoList component: displays the complete list of tasks.
-var Comp = component.Component{
-	TemplatePath: componentDir() + "/todo-list.html",
-	LayoutPath:   layoutDir() + "/layout.html",
-	StylePath:    componentDir() + "/todo-list.css",
-	Handler: func(ctx *component.Ctx) any {
-		ts := ctx.State.Get("todos").(*todostore.TodoStore)
-		return map[string]any{
-			"Todos": ts.All(),
-			"Stats": ts.Stats(),
-			"name":  "Jorge",
-		}
-	},
-}
+var Comp = component.New(func(ctx *component.Ctx) any {
+	ts := ctx.State.Get("todos").(*todostore.TodoStore)
+	return map[string]any{
+		"Todos": ts.All(),
+		"Stats": ts.Stats(),
+		"name":  "Jorge",
+	}
+}).WithLayout("../layout/layout.html")
 
 // Register registers all routes for the TodoList component.
 func Register(app *thunder.App) {
@@ -63,12 +58,3 @@ func Register(app *thunder.App) {
 	})
 }
 
-func componentDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/todo-sample/components/todo-list"
-}
-
-func layoutDir() string {
-	dir, _ := os.Getwd()
-	return dir + "/examples/todo-sample/components/layout"
-}

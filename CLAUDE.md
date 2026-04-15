@@ -27,7 +27,7 @@ Module name is `thunder` (see go.mod). Go 1.24.0. Only external dependency is `l
 
 ## Architecture
 
-Thunder is a component-oriented Go web framework with co-located `.go` + `.html` + `.css` files per component. Packages live at the root level (`component/`, `render/`, `router/`, `server/`, `state/`). The main orchestrator is `thunder.go`.
+Thunder is a component-oriented Go web framework with co-located `.go` + `.html` + `.css` files per component. Packages live at the root level (`component/`, `compress/`, `csrf/`, `recovery/`, `render/`, `router/`, `server/`, `state/`). The main orchestrator is `thunder.go`.
 
 ### App (`thunder.go`)
 
@@ -36,6 +36,7 @@ Thunder is a component-oriented Go web framework with co-located `.go` + `.html`
 ```go
 app := thunder.NewApp()
 
+app.RegisterComponent("widget", widget.Comp)  // Global component, usable as <t-widget /> in templates
 app.Component("/", myComp)                    // Register component as GET route
 app.Action("/do-thing", myComp, actionFn)     // Register POST action tied to component
 app.GET("/api/data", handler)                 // Standard GET route
@@ -53,6 +54,9 @@ Exported fields on `App`: `Renderer`, `Router`, `Logger`, `State`, `Sessions`.
 - **Renderer** (`render/`) — Go `html/template` engine with thread-safe caching (disabled in debug mode). Includes a **template preprocessor** that transforms Thunder directives into Go template syntax before parsing. Handles CSS injection and layout composition.
 - **State** (`state/`) — thread-safe `sync.RWMutex`-based key-value store. Two scopes: **global** (`app.State`, shared across all users) and **session** (per-user, managed via `SessionStore` with cookie-based session IDs).
 - **Server** (`server/`) — HTTP server with graceful shutdown (SIGTERM/SIGINT), 15s read/write timeouts, 60s idle timeout.
+- **CSRF** (`csrf/`) — Double-Submit Cookie CSRF protection. Middleware generates token in `thunder_csrf` cookie, validates on POST/PUT/DELETE/PATCH via `X-CSRF-Token` header or `_csrf` form field. Auto-injected into forms by the preprocessor and into HTMX requests via `htmx:configRequest`. Enabled by default; disable with `AppArgs.DisableCSRF`.
+- **Recovery** (`recovery/`) — Panic recovery middleware, logs stack traces and returns 500.
+- **Compress** (`compress/`) — Gzip compression middleware for eligible responses.
 
 ## Component System
 
@@ -115,6 +119,41 @@ func Register(app *thunder.App) {
 - `app.RenderComponentPartial(w, r, comp)` — render without layout (HTML fragment).
 - `app.Render(w, templateName, data)` — legacy rendering from `templates/` directory.
 
+### Global Component Registry (`<t-NAME />`)
+
+Components can be registered globally and used declaratively in any template via custom HTML tags. This eliminates the need for `WithChild()` on every parent.
+
+**Registration (once in main.go or setup):**
+
+```go
+app.RegisterComponent("counter", counter.Comp)
+app.RegisterComponent("sidebar", sidebar.Comp)
+```
+
+**Usage in any template:**
+
+```html
+<div class="page">
+    <t-sidebar />
+    <h1>My Page</h1>
+    <t-counter />
+</div>
+```
+
+The `<t-NAME />` tag is resolved by a **dedicated component preprocessor** (`render/preprocess_component.go`) that runs before the directive preprocessor. It transforms `<t-NAME />` into `{{component "NAME"}}`, which the render engine resolves at runtime by executing the component's handler and rendering its template inline.
+
+**Preprocessor pipeline order:**
+
+1. **Component preprocessor** — resolves `<t-NAME />` tags (needs registry context)
+2. **Directive preprocessor** — resolves `t-if`, `t-for`, `t-class-*`, etc. (pure text)
+3. **Go `html/template` parser**
+
+**Rules:**
+- Only tags matching a registered component name are transformed. Unknown `<t-xyz />` tags are left untouched.
+- Reserved directives (`t-if`, `t-for`, `t-else`, `t-class-*`, `t-morph`, `t-title`) are never treated as components.
+- Both self-closing (`<t-name />`) and paired (`<t-name>...</t-name>`) forms work. Content inside paired tags is discarded.
+- Global components coexist with `WithChild()` — both `{{child "name"}}` and `{{component "name"}}` work in the same template.
+
 ## Template System
 
 ### Preprocessor Directives
@@ -130,6 +169,7 @@ Thunder preprocesses HTML templates before Go's `html/template` parses them. Pag
 | `t-class-NAME` | `<div t-class-active=".IsActive">` | Conditionally add CSS class |
 | `t-morph` | `<div t-morph>...</div>` | Adds `hx-ext="morph"` and `hx-swap="morph:innerHTML"` (Idiomorph) |
 | `<t-title>` | `<t-title>My Page</t-title>` | Sets the page title block |
+| `<t-NAME>` | `<t-counter />` | Renders a globally registered component inline |
 | `<template>` | `<template t-if=".X">...</template>` | Invisible wrapper (stripped from output) |
 
 Use single quotes for expressions containing double quotes: `t-if='gt (index .Stats "Done") 0'`.
@@ -156,7 +196,10 @@ Component CSS (`StylePath`) is automatically injected into the `component-styles
 
 ### Built-in Template Functions
 
-`safeHTML`, `safeJS`, `safeCSS`, `safeURL`, `safeAttr`, `year`. Custom functions via `app.Renderer.AddFunc(name, fn)`.
+`safeHTML`, `safeJS`, `safeCSS`, `safeURL`, `safeAttr`, `year`, `child`, `component`. Custom functions via `app.Renderer.AddFunc(name, fn)`.
+
+- `{{child "name"}}` — renders a child registered via `WithChild()` on the parent component.
+- `{{component "name"}}` — renders a globally registered component (via `app.RegisterComponent()`).
 
 ## HTMX Integration
 
@@ -171,3 +214,55 @@ This enables seamless partial page updates without full page reloads.
 ## Session Management
 
 Sessions are cookie-based (`thunder_session` cookie). Session IDs are cryptographically random (16 bytes, hex-encoded). Cookies are `HttpOnly`, `SameSite=Lax`, with 1-hour `MaxAge`. Expired sessions are cleaned up automatically in the background. Hard limit of 5,000 concurrent sessions.
+
+## Work traking
+
+Use 'bd' for task tracking
+
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+## Session Completion
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd dolt push
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+<!-- END BEADS INTEGRATION -->

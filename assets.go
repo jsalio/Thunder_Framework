@@ -5,7 +5,8 @@ import (
 	"compress/gzip"
 	_ "embed"
 	"net/http"
-	"thunder/compress"
+
+	"github.com/jsalio/thunder_framework/compress"
 )
 
 //go:embed assets/js/htmx.min.js
@@ -14,15 +15,19 @@ var htmxJS []byte
 //go:embed assets/js/idiomorph-ext.min.js
 var idiomorphJS []byte
 
-// Pre-compressed versions of embedded assets (computed once at startup).
+//go:embed assets/js/thunder-sse.js
+var thunderSSEJS []byte
+
 var (
 	htmxJSGzip      []byte
 	idiomorphJSGzip []byte
+	thunderSSEGzip  []byte
 )
 
 func init() {
 	htmxJSGzip = precompress(htmxJS)
 	idiomorphJSGzip = precompress(idiomorphJS)
+	thunderSSEGzip = precompress(thunderSSEJS)
 }
 
 func precompress(data []byte) []byte {
@@ -59,5 +64,17 @@ func (a *App) registerAssetRoutes() {
 			return
 		}
 		w.Write(idiomorphJS)
+	}))
+
+	a.Router.Handle("GET /__thunder/thunder-sse.js", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("Vary", "Accept-Encoding")
+		if compress.AcceptsGzip(r) {
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Write(thunderSSEGzip)
+			return
+		}
+		w.Write(thunderSSEJS)
 	}))
 }
