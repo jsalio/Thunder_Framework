@@ -7,3 +7,6 @@ CLAUDE.md
 .dolt/
 *.db
 .beads-credential-key
+.obsidian/*
+thunder/*
+notes/*
