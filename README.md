@@ -121,6 +121,104 @@ A typical Thunder project looks like this:
 
 ---
 
+## 🔥 Live Development with `thunder watch`
+
+Thunder includes a file watcher that rebuilds your Go server and reloads the browser automatically whenever you save a file. No manual restarts, no browser refreshing.
+
+### Installation
+
+Build the `thunder` binary from the `thunder/` directory:
+
+```bash
+cd thunder
+cargo build --release
+# Binary is at thunder/target/release/thunder
+# Optionally copy it to your PATH:
+cp target/release/thunder /usr/local/bin/thunder
+```
+
+Requires [Rust](https://rustup.rs) to build (runtime dependency: none).
+
+### Basic Usage
+
+```bash
+thunder watch ./examples/counter
+```
+
+This will:
+
+1. Build your Go package
+2. Spawn the server
+3. Watch for file changes and react automatically
+4. Open a WebSocket on port 3001 that triggers browser reloads
+
+### What Happens on Each File Change
+
+| File type | What happens |
+| --- | --- |
+| `.go` | Server is stopped, package is rebuilt, new server is started, browser reloads |
+| `.html` | Browser reloads immediately — no server restart |
+| `.css` | Browser reloads immediately — no server restart |
+| `.js` | Browser reloads immediately — no server restart |
+
+Asset changes (HTML/CSS/JS) take ~100ms to reach the browser. Go rebuilds take as long as `go build` does — typically under a second with a warm cache.
+
+### Options
+
+```bash
+thunder watch <go-package> [options]
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `<go-package>` | `.` | Path to the Go package to build and run |
+| `-d, --watch-dir` | same as package | Directory to watch for changes. Useful if your templates live outside the package directory |
+| `-w, --ws-port` | `3001` | WebSocket port the browser connects to for reload signals |
+| `--build-first` | off | See below |
+| `-e, --extra-ext` | none | Additional file extensions to watch, comma-separated (e.g. `toml,json`) |
+
+### Kill-First vs. Build-First
+
+By default, `thunder watch` uses **kill-first** mode:
+
+1. File saved → old server is stopped immediately
+2. `go build` runs (server is down during this time)
+3. New server starts → browser reloads
+
+This is safe on all machines and keeps memory usage low. The downside is a brief gap where the server is unavailable during the build.
+
+With `--build-first`, the old server stays alive while the new binary is being compiled:
+
+```bash
+thunder watch ./examples/counter --build-first
+```
+
+1. File saved → `go build` starts, old server keeps serving
+2. Build finishes → old server is stopped, new server starts → browser reloads
+
+This gives zero downtime during development but uses roughly double the memory at peak (two binaries in memory simultaneously). Use it if your build takes long enough that you notice the gap.
+
+### Build Errors
+
+If your Go code has a syntax or compile error, `thunder watch` will print the error to the terminal and **leave the old server running**. A broken save never kills a working server. Fix the error and save again — the watcher picks it up automatically.
+
+### How the Live-Reload Script Gets In
+
+When `thunder watch` spawns your server, it sets two environment variables:
+
+- `THUNDER_WATCHER=1` — tells Thunder to enable live-reload
+- `THUNDER_WS_PORT=3001` — tells Thunder which WebSocket port to connect to
+
+Thunder's `Run()` detects these and injects a small WebSocket client script before `</body>` in every layout. The browser connects to the watcher's WebSocket server and calls `location.reload()` on any message. If the watcher exits unexpectedly, the browser retries the connection every 2 seconds.
+
+You do not need to add anything to your templates or Go code for this to work.
+
+### Stopping the Watcher
+
+Press `Ctrl+C`. The watcher sends a graceful shutdown signal to the Go server, waits for it to drain, then exits. No orphan processes, no leaked ports.
+
+---
+
 ## 🛠️ Requirements
 
 - Go 1.22+
